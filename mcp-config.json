@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mission-control": {
+      "command": "node",
+      "args": [
+        "<MISSION_CONTROL_DIR>/bin/mcp-server.js"
+      ]
+    }
+  }
+}

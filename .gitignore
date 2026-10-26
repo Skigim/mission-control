@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-ssr/
+data/
+STATUS.md
+*.local
+*.log
+*.tmp
+.env
+.env.*
+.vscode/
+.DS_Store

@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-canvas: #09090b;
+    --bg-surface: #111113;
+    --bg-elevated: #18181b;
+    --bg-recessed: #0c0c0e;
+    --border-subtle: #222226;
+    --border-strong: #323238;
+  }
+
+  body {
+    @apply bg-canvas text-zinc-100 font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Surface Primitives */
+  .surface-panel {
+    @apply bg-surface border border-subtle rounded-lg;
+  }
+
+  .surface-panel-interactive {
+    @apply bg-surface border border-subtle rounded-lg transition-colors duration-150 hover:border-strong;
+  }
+
+  .surface-recessed {
+    @apply bg-recessed border border-subtle rounded-md;
+  }
+
+  /* Button Primitives */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-100 text-zinc-950 hover:bg-white transition-colors disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-elevated hover:bg-zinc-800 text-zinc-200 border border-subtle hover:border-strong transition-colors disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-elevated transition-colors disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* Form Controls */
+  .input-field {
+    @apply w-full px-3 py-1.5 bg-recessed border border-subtle rounded-md text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 transition-colors;
+  }
+
+  .form-label {
+    @apply text-[11px] font-medium text-zinc-400 block mb-1.5;
+  }
+
+  /* Badges & Labels */
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-mono font-medium border;
+  }
+
+  .badge-neutral {
+    @apply badge bg-zinc-800/60 text-zinc-300 border-zinc-700/60;
+  }
+
+  .label-caps {
+    @apply text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-medium;
+  }
+}
+
+/* Minimal Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
