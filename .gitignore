@@ -11,3 +11,4 @@ STATUS.md
 .vscode/
 .DS_Store
 *.lnk
+release/

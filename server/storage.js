@@ -12,9 +12,25 @@ const defaultRootDir = path.resolve(__dirname, '..');
 
 export const CANONICAL_GLOBAL_DIR = path.join(os.homedir(), '.mission-control');
 
-const rootDir = process.env.MISSION_CONTROL_DIR
-  ? path.resolve(process.env.MISSION_CONTROL_DIR)
-  : defaultRootDir;
+function resolveRootDir() {
+  if (process.env.MISSION_CONTROL_DIR) {
+    return path.resolve(process.env.MISSION_CONTROL_DIR);
+  }
+  const isInsideAsar = __dirname.includes('app.asar') || __dirname.includes('app.asar.unpacked');
+  if (isInsideAsar) {
+    return CANONICAL_GLOBAL_DIR;
+  }
+  const localDataPath = path.join(defaultRootDir, 'data', 'dashboard.json');
+  if (fs.existsSync(localDataPath)) {
+    return defaultRootDir;
+  }
+  if (fs.existsSync(CANONICAL_GLOBAL_DIR)) {
+    return CANONICAL_GLOBAL_DIR;
+  }
+  return defaultRootDir;
+}
+
+const rootDir = resolveRootDir();
 
 const dataDir = process.env.MISSION_CONTROL_DATA_DIR
   ? path.resolve(process.env.MISSION_CONTROL_DATA_DIR)
@@ -51,8 +67,17 @@ class StorageEngine extends EventEmitter {
     }
 
     if (!fs.existsSync(dataFilePath)) {
-      fs.writeFileSync(dataFilePath, JSON.stringify(initialData, null, 2), 'utf-8');
-      this.generateStatusMarkdown(initialData);
+      let seed = initialData;
+      try {
+        const fallbackDevPath = path.join(defaultRootDir, 'data', 'dashboard.json');
+        if (fs.existsSync(fallbackDevPath)) {
+          seed = JSON.parse(fs.readFileSync(fallbackDevPath, 'utf-8'));
+        }
+      } catch {
+        seed = initialData;
+      }
+      fs.writeFileSync(dataFilePath, JSON.stringify(seed, null, 2), 'utf-8');
+      this.generateStatusMarkdown(seed);
     }
   }
 

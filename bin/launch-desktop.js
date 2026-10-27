@@ -2,6 +2,7 @@
 
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9,12 +10,20 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const isDev = process.argv.includes('--dev');
 
-const electronBin = path.join(rootDir, 'node_modules', 'electron', 'dist', 'electron.exe');
-const args = isDev ? ['.', '--dev'] : ['.'];
+const packagedBin = path.join(rootDir, 'release', 'win-unpacked', 'Mission Control.exe');
+const usePackaged = !isDev && fs.existsSync(packagedBin);
+
+const targetBin = usePackaged
+  ? packagedBin
+  : path.join(rootDir, 'node_modules', 'electron', 'dist', 'electron.exe');
+
+const args = usePackaged
+  ? []
+  : (isDev ? ['.', '--dev'] : ['.']);
 
 if (process.platform === 'win32') {
-  const quotedArgs = args.map((a) => `"${a}"`).join(' ');
-  const cmdLine = `"${electronBin}" ${quotedArgs}`;
+  const quotedArgs = args.length ? ' ' + args.map((a) => `"${a}"`).join(' ') : '';
+  const cmdLine = `"${targetBin}"${quotedArgs}`;
   const psCommand = `
 Add-Type @"
 using System;
