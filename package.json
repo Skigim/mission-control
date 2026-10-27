@@ -1,6 +1,7 @@
 {
   "name": "personal-dashboard",
   "productName": "Mission Control",
+  "author": "Skigim",
   "description": "Utilitarian desktop hub for AI-native workflows and multi-project tracking",
   "private": true,
   "version": "1.0.0",
