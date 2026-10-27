@@ -47,7 +47,7 @@ npm install
 - **Electron Desktop & Web UI**: High-contrast, zero-glassmorphism dark dashboard built with React 18, Vite, Tailwind CSS, and Electron (`npm run desktop`).
 - **Native Local Workspace Integration**: Browse and link local project directories, inspect Git branch/dirty state/last commit and file trees, and open folders directly in Explorer, PowerShell, or your IDE.
 - **Agent-Assisted Onboarding (`onboard`)**: Choose **Assisted (Agent Onboarding)** when creating a project (or run `node bin/dashboard.js onboard <id|path>`) to generate a tailored workflow instructing your agent to audit the repo, write the Status line, populate stack/guidelines, and seed open backlog tasks.
-- **MCP Server**: Stdio Model Context Protocol server exposing tools (`dashboard_list_projects`, `dashboard_onboard_project`, `dashboard_get_project_context`, `dashboard_create_project`, `dashboard_update_project`, `dashboard_add_task`, `dashboard_update_task`, `dashboard_log_activity`).
+- **MCP Server**: Stdio Model Context Protocol server exposing tools (`dashboard_list_projects`, `dashboard_onboard_project`, `dashboard_get_project_context`, `dashboard_create_project`, `dashboard_update_project`, `dashboard_add_task`, `dashboard_update_task`, `dashboard_delete_task`, `dashboard_list_milestones`, `dashboard_add_milestone`, `dashboard_update_milestone`, `dashboard_delete_milestone`, `dashboard_log_activity`).
 - **Auto-Synchronized `STATUS.md`**: Live workspace root summary updated on every mutation for instant LLM grounding.
 
 ---
@@ -81,6 +81,16 @@ node bin/dashboard.js task add <projectId> "Refactor API error handling" --ai-st
 
 # Update task status (default tag for agent completions is needs-review)
 node bin/dashboard.js task update <taskId> --status review --ai-status needs-review
+
+# Edit or delete a task
+node bin/dashboard.js task update <taskId> --title "New title" --desc "New description" --due 2026-12-01
+node bin/dashboard.js task delete <taskId>
+
+# Manage milestones
+node bin/dashboard.js milestone add <projectId> "Beta release" --target 2026-12-01
+node bin/dashboard.js milestone list --project <projectId>
+node bin/dashboard.js milestone update <milestoneId> --completed true
+node bin/dashboard.js milestone delete <milestoneId>
 
 # Dump prompt context for an LLM
 node bin/dashboard.js context <projectId>

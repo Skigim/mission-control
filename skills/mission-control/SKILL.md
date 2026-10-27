@@ -165,6 +165,8 @@ When onboarding a new or existing local project into Mission Control (or asked t
 - `dashboard_create_project` — Register a new project.
 - `dashboard_update_project` — Update a project's `description` (Status line), `progress`, `status`, `health`, `techStack`, `repoUrl`, `tags`, or `aiGuidelines`.
 - `dashboard_add_task` / `dashboard_update_task` — Create or update project tasks (`todo`, `in-progress`, `review`, `done`; AI statuses: `ai-ready`, `agent-in-progress`, `needs-review`, `human-only`, `ai-completed`). Default tag when completed by an agent is `needs-review`.
+- `dashboard_update_task` also accepts `title`, `description`, and `dueDate`; `dashboard_delete_task` removes a task.
+- `dashboard_list_milestones` / `dashboard_add_milestone` / `dashboard_update_milestone` / `dashboard_delete_milestone` — Manage project milestones (`title`, `targetDate`, `completed`).
 - `dashboard_log_activity` — Append an entry to the Mission Control activity stream.
 
 ### CLI Commands (`<MISSION_CONTROL_DIR>/bin/dashboard.js`)
@@ -172,6 +174,7 @@ When onboarding a new or existing local project into Mission Control (or asked t
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" onboard <id|path> [--create] [--json]`
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" project <id|add|update|delete> [options] [--json]`
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" status <id> <status> [--health <h>] [--progress <0-100>]`
-- `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" task <list|add|update> [options] [--json]`
+- `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" task <list|add|update|delete> [options] [--json]` (`task update` accepts `--title`, `--desc`, `--due`)
+- `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" milestone <list|add|update|delete> [options] [--json]` (`--project`, `--target`, `--completed`, `--title`)
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" context <projectId>`
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" log "<message>"`

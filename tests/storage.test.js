@@ -103,6 +103,16 @@ try {
   assert(typeof paths.canonicalGlobalDir === 'string' && paths.canonicalGlobalDir.includes('.mission-control'));
   console.log('PASS: Storage paths and canonical global directory verified.');
 
+  // Milestones: CRUD and unknown-ID handling
+  const testMs = storage.createMilestone({ projectId: 'proj-test-auto', title: 'Storage Milestone' });
+  assert.strictEqual(testMs.completed, false);
+  assert.strictEqual(storage.updateMilestone(testMs.id, { completed: true }).completed, true);
+  assert.strictEqual(storage.updateMilestone('ms-nope', { completed: true }), null);
+  assert.strictEqual(storage.deleteMilestone('ms-nope'), false, 'Unknown milestone delete returns false');
+  assert.strictEqual(storage.deleteMilestone(testMs.id), true);
+  assert.strictEqual(storage.getMilestones('proj-test-auto').length, 0);
+  console.log('PASS: Milestone CRUD & unknown-ID handling verified.');
+
   // Clean up test project
   storage.deleteProject('proj-test-auto');
   assert(!storage.getProject('proj-test-auto'), 'Test project should be deleted');

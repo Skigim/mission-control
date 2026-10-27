@@ -431,7 +431,7 @@ class StorageEngine extends EventEmitter {
     const data = this.read();
     if (!data.milestones) data.milestones = [];
     const newMs = {
-      id: ms.id || `ms-${Date.now().toString(36)}`,
+      id: ms.id || `ms-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`,
       projectId: ms.projectId,
       title: ms.title || 'Untitled Milestone',
       targetDate: ms.targetDate || '',
@@ -454,7 +454,9 @@ class StorageEngine extends EventEmitter {
 
   deleteMilestone(id) {
     const data = this.read();
+    const before = (data.milestones || []).length;
     data.milestones = (data.milestones || []).filter(m => m.id !== id);
+    if (data.milestones.length === before) return false;
     this.write(data);
     return true;
   }

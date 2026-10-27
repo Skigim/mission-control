@@ -59,7 +59,15 @@ COMMANDS:
   task update <taskId>        Update a task
                               Options: --status <todo|in-progress|review|done>,
                                        --ai-status <ai-ready|agent-in-progress|needs-review|human-only|ai-completed>,
-                                       --priority <priority>
+                                       --priority <priority>, --title <text>, --desc <text>,
+                                       --due <YYYY-MM-DD>
+  task delete <taskId>        Delete a task
+  milestone list              List milestones (Options: --project <id>)
+  milestone add <projId> <title>
+                              Create a milestone (Options: --target <YYYY-MM-DD>, --completed)
+  milestone update <id>       Update a milestone (Options: --title <text>, --target <YYYY-MM-DD>,
+                                       --completed <true|false>)
+  milestone delete <id>       Delete a milestone
   context <projectId>         Output LLM-ready prompt context for an AI agent
   log <message>               Append an entry to the dashboard activity log
                               Options: --actor <ai|human>
@@ -304,7 +312,9 @@ async function run() {
             updates.aiStatus = s;
           }
           if (flags.priority) updates.priority = flags.priority;
-          if (flags.title) updates.title = flags.title;
+          if (typeof flags.title === 'string') updates.title = flags.title;
+          if (flags.desc !== undefined) updates.description = flags.desc === true ? '' : flags.desc;
+          if (flags.due !== undefined) updates.dueDate = flags.due === true ? '' : flags.due;
 
           const updated = storage.updateTask(taskId, updates);
           if (!updated) {
@@ -316,8 +326,101 @@ async function run() {
           } else {
             console.log(`Updated task "${updated.title}" (${updated.id}): status=${updated.status}, aiStatus=${updated.aiStatus}`);
           }
+        } else if (sub === 'delete') {
+          const taskId = args[2];
+          if (!taskId) {
+            console.error('Error: Usage: node bin/dashboard.js task delete <taskId>');
+            process.exit(1);
+          }
+          if (!storage.deleteTask(taskId)) {
+            console.error(`Task "${taskId}" not found.`);
+            process.exit(1);
+          }
+          if (isJson) {
+            console.log(JSON.stringify({ deleted: true, id: taskId }, null, 2));
+          } else {
+            console.log(`Deleted task "${taskId}"`);
+          }
         } else {
-          console.error('Unknown task subcommand. Try: node bin/dashboard.js task [list|add|update]');
+          console.error('Unknown task subcommand. Try: node bin/dashboard.js task [list|add|update|delete]');
+          process.exit(1);
+        }
+        break;
+      }
+
+      case 'milestone': {
+        const sub = args[1];
+        if (sub === 'list') {
+          const milestones = storage.getMilestones(typeof flags.project === 'string' ? flags.project : undefined);
+          if (isJson) {
+            console.log(JSON.stringify(milestones, null, 2));
+          } else {
+            console.log(`\nMILESTONES (${milestones.length}):`);
+            for (const m of milestones) {
+              console.log(`- [${m.completed ? 'x' : ' '}] ${m.title} (${m.id}) [Target: ${m.targetDate || 'none'}] (Project: ${m.projectId})`);
+            }
+            console.log('');
+          }
+        } else if (sub === 'add') {
+          const projectId = args[2];
+          const title = args[3];
+          if (!projectId || !title) {
+            console.error('Error: Usage: node bin/dashboard.js milestone add <projectId> <title> [--target <YYYY-MM-DD>] [--completed]');
+            process.exit(1);
+          }
+          if (!storage.getProject(projectId)) {
+            console.error(`Error: Project "${projectId}" not found.`);
+            process.exit(1);
+          }
+          const ms = storage.createMilestone({
+            projectId,
+            title,
+            targetDate: typeof flags.target === 'string' ? flags.target : '',
+            completed: flags.completed === true || flags.completed === 'true'
+          });
+          if (isJson) {
+            console.log(JSON.stringify(ms, null, 2));
+          } else {
+            console.log(`Created milestone "${ms.title}" (${ms.id}) for project ${ms.projectId}`);
+          }
+        } else if (sub === 'update') {
+          const msId = args[2];
+          if (!msId) {
+            console.error('Error: Usage: node bin/dashboard.js milestone update <milestoneId> [--title <text>] [--target <YYYY-MM-DD>] [--completed <true|false>]');
+            process.exit(1);
+          }
+          const updates = {};
+          if (typeof flags.title === 'string') updates.title = flags.title;
+          if (flags.target !== undefined) updates.targetDate = flags.target === true ? '' : flags.target;
+          if (flags.completed !== undefined) updates.completed = flags.completed !== 'false';
+          const updated = storage.updateMilestone(msId, updates);
+          if (!updated) {
+            console.error(`Milestone "${msId}" not found.`);
+            process.exit(1);
+          }
+          if (isJson) {
+            console.log(JSON.stringify(updated, null, 2));
+          } else {
+            console.log(`Updated milestone "${updated.title}" (${updated.id}): completed=${updated.completed}, target=${updated.targetDate || 'none'}`);
+          }
+        } else if (sub === 'delete') {
+          const msId = args[2];
+          if (!msId) {
+            console.error('Error: Usage: node bin/dashboard.js milestone delete <milestoneId>');
+            process.exit(1);
+          }
+          if (!storage.deleteMilestone(msId)) {
+            console.error(`Milestone "${msId}" not found.`);
+            process.exit(1);
+          }
+          if (isJson) {
+            console.log(JSON.stringify({ deleted: true, id: msId }, null, 2));
+          } else {
+            console.log(`Deleted milestone "${msId}"`);
+          }
+        } else {
+          console.error('Unknown milestone subcommand. Try: node bin/dashboard.js milestone [list|add|update|delete]');
+          process.exit(1);
         }
         break;
       }

@@ -237,13 +237,25 @@ const TOOLS = [
   },
   {
     name: 'dashboard_update_task',
-    description: 'Updates an existing task\'s status (column), AI delegation status, or priority.',
+    description: 'Updates an existing task\'s title, description, status (column), AI delegation status, priority, or due date.',
     inputSchema: {
       type: 'object',
       properties: {
         taskId: {
           type: 'string',
           description: 'The ID of the task to update',
+        },
+        title: {
+          type: 'string',
+          description: 'Updated task title',
+        },
+        description: {
+          type: 'string',
+          description: 'Updated task description or acceptance criteria',
+        },
+        dueDate: {
+          type: 'string',
+          description: 'Updated due date in YYYY-MM-DD format',
         },
         status: {
           type: 'string',
@@ -260,6 +272,99 @@ const TOOLS = [
         },
       },
       required: ['taskId'],
+    },
+  },
+  {
+    name: 'dashboard_delete_task',
+    description: 'Permanently deletes a task from the personal dashboard.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        taskId: {
+          type: 'string',
+          description: 'The ID of the task to delete',
+        },
+      },
+      required: ['taskId'],
+    },
+  },
+  {
+    name: 'dashboard_list_milestones',
+    description: 'Lists milestones, optionally filtered by project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Optional project ID to filter by',
+        },
+      },
+    },
+  },
+  {
+    name: 'dashboard_add_milestone',
+    description: 'Creates a milestone for a project.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'The ID of the parent project',
+        },
+        title: {
+          type: 'string',
+          description: 'Milestone title',
+        },
+        targetDate: {
+          type: 'string',
+          description: 'Target date in YYYY-MM-DD format',
+        },
+        completed: {
+          type: 'boolean',
+          description: 'Whether the milestone is already achieved',
+        },
+      },
+      required: ['projectId', 'title'],
+    },
+  },
+  {
+    name: 'dashboard_update_milestone',
+    description: 'Updates a milestone\'s title, target date, or completion state.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        milestoneId: {
+          type: 'string',
+          description: 'The ID of the milestone to update',
+        },
+        title: {
+          type: 'string',
+          description: 'Updated title',
+        },
+        targetDate: {
+          type: 'string',
+          description: 'Updated target date in YYYY-MM-DD format',
+        },
+        completed: {
+          type: 'boolean',
+          description: 'Updated completion state',
+        },
+      },
+      required: ['milestoneId'],
+    },
+  },
+  {
+    name: 'dashboard_delete_milestone',
+    description: 'Permanently deletes a milestone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        milestoneId: {
+          type: 'string',
+          description: 'The ID of the milestone to delete',
+        },
+      },
+      required: ['milestoneId'],
     },
   },
   {
@@ -363,7 +468,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'dashboard_update_task': {
-        const { taskId, ...updates } = toolArgs;
+        const { taskId, title, description, status, aiStatus, priority, dueDate } = toolArgs;
+        const updates = Object.fromEntries(Object.entries({ title, description, status, aiStatus, priority, dueDate })
+          .filter(([, v]) => v !== undefined));
         const updated = storage.updateTask(taskId, { ...updates, actor: 'ai' });
         if (!updated) {
           return {
@@ -378,6 +485,74 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `Task "${updated.title}" (${updated.id}) updated: status=${updated.status}, aiStatus=${updated.aiStatus}.`,
             },
           ],
+        };
+      }
+
+      case 'dashboard_delete_task': {
+        if (!storage.deleteTask(toolArgs.taskId)) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Task "${toolArgs.taskId}" not found.` }],
+          };
+        }
+        return {
+          content: [{ type: 'text', text: `Task "${toolArgs.taskId}" deleted.` }],
+        };
+      }
+
+      case 'dashboard_list_milestones': {
+        return {
+          content: [
+            { type: 'text', text: JSON.stringify(storage.getMilestones(toolArgs?.projectId), null, 2) },
+          ],
+        };
+      }
+
+      case 'dashboard_add_milestone': {
+        if (!storage.getProject(toolArgs.projectId)) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Project "${toolArgs.projectId}" not found.` }],
+          };
+        }
+        const { projectId, title, targetDate, completed } = toolArgs;
+        const ms = storage.createMilestone({ projectId, title, targetDate, completed });
+        return {
+          content: [
+            { type: 'text', text: `Milestone "${ms.title}" (${ms.id}) created under project ${ms.projectId}.` },
+          ],
+        };
+      }
+
+      case 'dashboard_update_milestone': {
+        const { milestoneId, title, targetDate, completed } = toolArgs;
+        const updates = {};
+        if (title !== undefined) updates.title = title;
+        if (targetDate !== undefined) updates.targetDate = targetDate;
+        if (completed !== undefined) updates.completed = completed;
+        const updated = storage.updateMilestone(milestoneId, updates);
+        if (!updated) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Milestone "${milestoneId}" not found.` }],
+          };
+        }
+        return {
+          content: [
+            { type: 'text', text: `Milestone "${updated.title}" (${updated.id}) updated: completed=${updated.completed}, targetDate=${updated.targetDate || 'none'}.` },
+          ],
+        };
+      }
+
+      case 'dashboard_delete_milestone': {
+        if (!storage.deleteMilestone(toolArgs.milestoneId)) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Milestone "${toolArgs.milestoneId}" not found.` }],
+          };
+        }
+        return {
+          content: [{ type: 'text', text: `Milestone "${toolArgs.milestoneId}" deleted.` }],
         };
       }
 

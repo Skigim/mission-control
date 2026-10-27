@@ -98,6 +98,26 @@ try {
   assert(onboardJson.prompt.includes('AGENT ONBOARDING WORKFLOW:'));
   console.log('PASS: GET /api/onboarding/:projectId verified.');
 
+  // Test 5c: Milestones CRUD & 404s
+  const msRes = await fetch(`http://localhost:${TEST_PORT}/api/milestones`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId: testProj.id, title: 'API Milestone' })
+  });
+  assert.strictEqual(msRes.status, 201);
+  const testMs = await msRes.json();
+  const msPut = await fetch(`http://localhost:${TEST_PORT}/api/milestones/${testMs.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ completed: true })
+  });
+  assert.strictEqual((await msPut.json()).completed, true);
+  const msDel = await fetch(`http://localhost:${TEST_PORT}/api/milestones/${testMs.id}`, { method: 'DELETE' });
+  assert.strictEqual(msDel.status, 200);
+  const msDelAgain = await fetch(`http://localhost:${TEST_PORT}/api/milestones/${testMs.id}`, { method: 'DELETE' });
+  assert.strictEqual(msDelAgain.status, 404);
+  console.log('PASS: /api/milestones CRUD & 404 on unknown ID verified.');
+
   // Test 6: Cleanup task & project
   const delTaskRes = await fetch(`http://localhost:${TEST_PORT}/api/tasks/${newTask.id}`, {
     method: 'DELETE'

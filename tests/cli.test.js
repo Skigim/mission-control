@@ -50,6 +50,46 @@ try {
   assert.strictEqual(explicitTask.aiStatus, 'needs-review');
   console.log('PASS: "dashboard task update ... --ai-status \'needs review\'" normalization passed.');
 
+  // Test 5c: task update --desc
+  const descOutput = execSync(`node bin/dashboard.js task update "${createdTask.id}" --desc "New description" --json`, { encoding: 'utf-8' });
+  assert.strictEqual(JSON.parse(descOutput).description, 'New description');
+  console.log('PASS: "dashboard task update ... --desc" passed.');
+
+  // Test 5d: milestone CRUD
+  const msAdd = JSON.parse(execSync(`node bin/dashboard.js milestone add "${createdProj.id}" "CLI Milestone" --target 2026-12-01 --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msAdd.title, 'CLI Milestone');
+  assert.strictEqual(msAdd.completed, false);
+  const msList = JSON.parse(execSync(`node bin/dashboard.js milestone list --project "${createdProj.id}" --json`, { encoding: 'utf-8' }));
+  assert(msList.some(m => m.id === msAdd.id), 'Milestone list should include created milestone');
+  const msUpd = JSON.parse(execSync(`node bin/dashboard.js milestone update "${msAdd.id}" --completed true --title "Renamed" --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msUpd.completed, true);
+  assert.strictEqual(msUpd.title, 'Renamed');
+  const msDel = JSON.parse(execSync(`node bin/dashboard.js milestone delete "${msAdd.id}" --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msDel.deleted, true);
+  assert.strictEqual(storage.getMilestones(createdProj.id).length, 0);
+  console.log('PASS: "dashboard milestone add|list|update|delete" passed.');
+
+  // Test 5d2: milestone flag edge cases
+  const msFalse = JSON.parse(execSync(`node bin/dashboard.js milestone add "${createdProj.id}" "Flag Milestone" --completed false --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msFalse.completed, false, '--completed false must not mark milestone complete');
+  const msBare = JSON.parse(execSync(`node bin/dashboard.js milestone update "${msFalse.id}" --completed --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msBare.completed, true, 'bare --completed marks milestone complete');
+  const msUnset = JSON.parse(execSync(`node bin/dashboard.js milestone update "${msFalse.id}" --completed false --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(msUnset.completed, false);
+  assert.throws(() => execSync(`node bin/dashboard.js milestone add "no-such-project" "X"`, { stdio: 'pipe' }), 'Unknown project should fail');
+  assert.throws(() => execSync(`node bin/dashboard.js milestone delete "ms-nope"`, { stdio: 'pipe' }), 'Unknown milestone should fail');
+  assert.throws(() => execSync(`node bin/dashboard.js task delete "task-nope"`, { stdio: 'pipe' }), 'Unknown task should fail');
+  storage.deleteMilestone(msFalse.id);
+  const descClear = JSON.parse(execSync(`node bin/dashboard.js task update "${createdTask.id}" --desc --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(descClear.description, '', 'Bare --desc clears description');
+  console.log('PASS: milestone/task CLI flag edge cases and error exits passed.');
+
+  // Test 5e: task delete
+  const taskDel = JSON.parse(execSync(`node bin/dashboard.js task delete "${createdTask.id}" --json`, { encoding: 'utf-8' }));
+  assert.strictEqual(taskDel.deleted, true);
+  assert(!storage.getTasks({ projectId: createdProj.id }).some(t => t.id === createdTask.id), 'Task should be gone');
+  console.log('PASS: "dashboard task delete" passed.');
+
   // Test 6: dashboard context
   const contextOutput = execSync(`node bin/dashboard.js context "${createdProj.id}"`, { encoding: 'utf-8' });
   assert(contextOutput.includes('PROJECT CONTEXT:'), 'Context must contain header');
