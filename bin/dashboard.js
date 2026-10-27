@@ -37,7 +37,7 @@ COMMANDS:
                                        --name <name>, --category <cat>
   project <id>                Show detailed info, AI guidelines & tasks for a project
   project add <name>          Create a new project
-                              Options: --id <id>, --desc <text>, --category <cat>,
+                              Options: --id <id>, --desc <text>, --category <cat>, --target <YYYY-MM-DD>,
                                        --status <planning|active|paused|review|completed>,
                                        --priority <low|medium|high|urgent>, --stack <text>,
                                        --path <dir>, --repo <url>, --tags <t1,t2>, --guidelines <text>
@@ -70,7 +70,7 @@ COMMANDS:
   milestone delete <id>       Delete a milestone
   context <projectId>         Output LLM-ready prompt context for an AI agent
   log <message>               Append an entry to the dashboard activity log
-                              Options: --actor <ai|human>
+                              Options: --actor <ai|human>, --project <id>, --action <headline>
   info                        Show installation paths, canonical global dir, and database locations
   help                        Show this help message
 
@@ -135,6 +135,7 @@ async function run() {
             techStack: flags.stack || '',
             localPath: flags.path || '',
             repoUrl: flags.repo || '',
+            targetDate: flags.target || '',
             aiGuidelines: flags.guidelines || '',
             tags: flags.tags ? flags.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
             actor: flags.actor || 'ai'
@@ -488,7 +489,8 @@ async function run() {
         }
         const actor = flags.actor || 'ai';
         const projectId = typeof flags.project === 'string' ? flags.project : undefined;
-        storage.logActivity(actor, 'Agent Log Entry', message, projectId);
+        const action = typeof flags.action === 'string' ? flags.action : 'Agent Log Entry';
+        storage.logActivity(actor, action, message, projectId);
         console.log(`Logged: [${actor}] ${message}`);
         break;
       }
@@ -516,7 +518,11 @@ async function run() {
         break;
     }
   } catch (err) {
-    console.error('Command execution failed:', err);
+    if (err?.name === 'ValidationError') {
+      console.error(`Error: ${err.message}`);
+    } else {
+      console.error('Command execution failed:', err);
+    }
     process.exit(1);
   }
 }

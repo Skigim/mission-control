@@ -162,12 +162,18 @@ When onboarding a new or existing local project into Mission Control (or asked t
 - `dashboard_list_projects` — List all projects (`status`, `health`, `progress`, `priority`).
 - `dashboard_onboard_project` — Generate an onboarding/audit workflow for a `projectId` or `localPath`.
 - `dashboard_get_project_context` — Fetch full LLM context & local git/file telemetry for a `projectId`.
-- `dashboard_create_project` — Register a new project.
-- `dashboard_update_project` — Update a project's `description` (Status line), `progress`, `status`, `health`, `techStack`, `repoUrl`, `tags`, or `aiGuidelines`.
-- `dashboard_add_task` / `dashboard_update_task` — Create or update project tasks (`todo`, `in-progress`, `review`, `done`; AI statuses: `ai-ready`, `agent-in-progress`, `needs-review`, `human-only`, `ai-completed`). Default tag when completed by an agent is `needs-review`.
+- `dashboard_create_project` — Register a new project (`id`, `name`, `description`, `category`, `status`, `health`, `priority`, `progress`, `techStack`, `repoUrl`, `targetDate`, `tags`, `aiGuidelines`). A duplicate `id` is rejected.
+- `dashboard_update_project` — Update a project's `description` (Status line), `progress`, `status`, `health`, `techStack`, `repoUrl`, `localPath`, `targetDate`, `tags`, or `aiGuidelines`.
+- `dashboard_delete_project` — Delete a project and cascade to its tasks and milestones.
+- `dashboard_list_tasks` — List tasks **with their IDs**, filtered by `projectId`, `status`, or `aiStatus`. Use this to discover a task ID before updating or deleting it.
+- `dashboard_add_task` / `dashboard_update_task` — Create or update project tasks (`backlog`, `todo`, `in-progress`, `review`, `done`; AI statuses: `ai-ready`, `agent-in-progress`, `needs-review`, `human-only`, `ai-completed`). Default tag when completed by an agent is `needs-review`. The `projectId` must name an existing project.
 - `dashboard_update_task` also accepts `title`, `description`, and `dueDate`; `dashboard_delete_task` removes a task.
 - `dashboard_list_milestones` / `dashboard_add_milestone` / `dashboard_update_milestone` / `dashboard_delete_milestone` — Manage project milestones (`title`, `targetDate`, `completed`).
-- `dashboard_log_activity` — Append an entry to the Mission Control activity stream.
+- `dashboard_log_activity` — Append an entry to the Mission Control activity stream (`action`, `message`, optional `actor` and `projectId`).
+
+**Validation applies to every surface** (MCP, CLI and REST share `server/storage.js`): a
+duplicate project id, a task or milestone naming a project that does not exist, or an
+out-of-range enum value is rejected with a `ValidationError`; `progress` is clamped to 0–100.
 
 ### CLI Commands (`<MISSION_CONTROL_DIR>/bin/dashboard.js`)
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" list [--json]`
@@ -177,4 +183,7 @@ When onboarding a new or existing local project into Mission Control (or asked t
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" task <list|add|update|delete> [options] [--json]` (`task update` accepts `--title`, `--desc`, `--due`)
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" milestone <list|add|update|delete> [options] [--json]` (`--project`, `--target`, `--completed`, `--title`)
 - `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" context <projectId>`
-- `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" log "<message>"`
+- `node "<MISSION_CONTROL_DIR>/bin/dashboard.js" log "<message>" [--actor ai|human] [--project <id>] [--action <headline>]`
+
+Every MCP tool has a CLI equivalent and vice versa; `project add`/`project update` both
+take `--target`, and `task list` mirrors `dashboard_list_tasks`.

@@ -97,6 +97,10 @@ const TOOLS = [
           type: 'string',
           description: 'Repository URL or local workspace path',
         },
+        targetDate: {
+          type: 'string',
+          description: 'Target delivery date in YYYY-MM-DD format',
+        },
         aiGuidelines: {
           type: 'string',
           description: 'Markdown guidelines and rules for AI agents working on this project',
@@ -169,6 +173,10 @@ const TOOLS = [
           type: 'number',
           description: 'Progress percentage between 0 and 100',
         },
+        targetDate: {
+          type: 'string',
+          description: 'Target delivery date in YYYY-MM-DD format',
+        },
         techStack: {
           type: 'string',
           description: 'Comma-separated tech stack',
@@ -192,6 +200,43 @@ const TOOLS = [
         },
       },
       required: ['projectId'],
+    },
+  },
+  {
+    name: 'dashboard_delete_project',
+    description: 'Permanently deletes a project and cascades to all of its tasks and milestones. This cannot be undone.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'The ID of the project to delete',
+        },
+      },
+      required: ['projectId'],
+    },
+  },
+  {
+    name: 'dashboard_list_tasks',
+    description: 'Lists tasks with their IDs, optionally filtered by project, workflow stage, or AI delegation status. Use this to discover task IDs before updating or deleting a task.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Optional project ID to filter by',
+        },
+        status: {
+          type: 'string',
+          enum: ['backlog', 'todo', 'in-progress', 'review', 'done'],
+          description: 'Optional workflow stage filter',
+        },
+        aiStatus: {
+          type: 'string',
+          enum: ['ai-ready', 'agent-in-progress', 'needs-review', 'human-only', 'ai-completed'],
+          description: 'Optional AI delegation status filter',
+        },
+      },
     },
   },
   {
@@ -381,6 +426,16 @@ const TOOLS = [
           type: 'string',
           description: 'Detailed description of the changes made or findings',
         },
+        actor: {
+          type: 'string',
+          enum: ['ai', 'human'],
+          default: 'ai',
+          description: 'Who performed the action; defaults to the AI agent',
+        },
+        projectId: {
+          type: 'string',
+          description: 'Optional project to attribute this entry to, so it shows in that project activity feed',
+        },
       },
       required: ['action', 'message'],
     },
@@ -425,7 +480,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'dashboard_create_project': {
-        const created = storage.createProject({ ...toolArgs, actor: 'ai' });
+        const created = storage.createProject({
+          status: 'active',
+          ...toolArgs,
+          actor: 'ai',
+        });
         return {
           content: [
             {
@@ -452,6 +511,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: `Project "${updated.name}" updated successfully: ${JSON.stringify(updated, null, 2)}`,
             },
           ],
+        };
+      }
+
+      case 'dashboard_delete_project': {
+        if (!storage.deleteProject(toolArgs.projectId)) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Project "${toolArgs.projectId}" not found.` }],
+          };
+        }
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Project "${toolArgs.projectId}" deleted, along with its tasks and milestones.`,
+            },
+          ],
+        };
+      }
+
+      case 'dashboard_list_tasks': {
+        const tasks = storage.getTasks({
+          projectId: toolArgs?.projectId,
+          status: toolArgs?.status,
+          aiStatus: toolArgs?.aiStatus,
+        });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(tasks, null, 2) }],
         };
       }
 
@@ -573,12 +660,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'dashboard_log_activity': {
-        storage.logActivity('ai', toolArgs.action, toolArgs.message);
+        const { action, message, actor = 'ai', projectId } = toolArgs;
+        if (projectId && !storage.getProject(projectId)) {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: `Project "${projectId}" not found.` }],
+          };
+        }
+        storage.logActivity(actor, action, message, projectId);
+        const scope = projectId ? ` (project ${projectId})` : '';
         return {
           content: [
             {
               type: 'text',
-              text: `Activity logged successfully: [${toolArgs.action}] ${toolArgs.message}`,
+              text: `Activity logged successfully: [${action}] ${message}${scope}`,
             },
           ],
         };
