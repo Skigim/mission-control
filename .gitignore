@@ -10,3 +10,4 @@ STATUS.md
 .env.*
 .vscode/
 .DS_Store
+*.lnk

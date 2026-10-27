@@ -15,6 +15,7 @@ const isDev = process.argv.includes('--dev') || Boolean(process.env.VITE_DEV_SER
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('log-level', '3');
+app.setAppUserModelId('com.skigim.missioncontrol');
 
 let mainWindow = null;
 
@@ -88,6 +89,10 @@ async function waitForUrl(url, timeoutMs = 6000) {
 async function createWindow() {
   await startServer(3001);
 
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, '..', 'assets', 'icon.ico')
+    : path.join(__dirname, '..', 'assets', 'icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1420,
     height: 900,
@@ -97,6 +102,7 @@ async function createWindow() {
     backgroundColor: '#09090b',
     autoHideMenuBar: true,
     title: 'Mission Control',
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

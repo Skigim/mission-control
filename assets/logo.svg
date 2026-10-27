@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" fill="none">
+  <!-- Dark Utilitarian Squircle Canvas -->
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="#0c0c0e" stroke="#27272a" stroke-width="4"/>
+  
+  <!-- Subtle Radar / Command Range Rings -->
+  <circle cx="128" cy="128" r="88" stroke="#1f1f23" stroke-width="2" stroke-dasharray="4 6"/>
+  <circle cx="128" cy="128" r="54" stroke="#27272a" stroke-width="2"/>
+  
+  <!-- Precision Crosshair Ticks -->
+  <line x1="128" y1="24" x2="128" y2="38" stroke="#71717a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="128" y1="218" x2="128" y2="232" stroke="#71717a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="24" y1="128" x2="38" y2="128" stroke="#71717a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="218" y1="128" x2="232" y2="128" stroke="#71717a" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Orbital Trajectory Arc -->
+  <path d="M 52 184 C 68 110, 146 64, 204 52" stroke="#3f3f46" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 8"/>
+
+  <!-- Mission Control Ascent Delta Chevron -->
+  <path d="M 128 62 L 182 178 L 128 154 L 74 178 Z" fill="#f4f4f5" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+  
+  <!-- Command Core / Active Signal Node -->
+  <circle cx="128" cy="122" r="10" fill="#10b981"/>
+  <circle cx="128" cy="122" r="16" stroke="#10b981" stroke-width="2" stroke-opacity="0.6"/>
+</svg>

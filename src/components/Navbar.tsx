@@ -7,6 +7,7 @@ import {
   Plus, 
   Terminal
 } from 'lucide-react';
+import { Logo } from './Logo';
 
 export type TabType = 'overview' | 'kanban' | 'timeline' | 'agent-log';
 
@@ -44,9 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => onTabChange('overview')}
             className="flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity"
           >
-            <div className="w-5 h-5 rounded bg-zinc-100 flex items-center justify-center">
-              <div className="w-2 h-2 bg-zinc-950 rounded-[1px]" />
-            </div>
+            <Logo size={22} className="shrink-0" />
             <span className="font-semibold text-sm tracking-tight text-zinc-100">
               Mission Control
             </span>
