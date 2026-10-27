@@ -145,6 +145,16 @@ app.post('/api/tasks', (req, res) => {
   }
 });
 
+app.post('/api/tasks/reorder', (req, res) => {
+  try {
+    const updated = storage.reorderTasks(req.body || {});
+    if (!updated) return res.status(404).json({ error: 'Task not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/tasks/:id', (req, res) => {
   const updated = storage.updateTask(req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: 'Task not found' });
@@ -206,11 +216,11 @@ app.post('/api/onboarding/preview', (req, res) => {
 
 // Activity Log
 app.post('/api/log', (req, res) => {
-  const { actor, action, message } = req.body;
+  const { actor, action, message, projectId } = req.body;
   if (!action || !message) {
     return res.status(400).json({ error: 'action and message are required' });
   }
-  storage.logActivity(actor || 'human', action, message);
+  storage.logActivity(actor || 'human', action, message, projectId);
   res.json({ success: true });
 });
 

@@ -54,11 +54,12 @@ COMMANDS:
   task list                   List tasks (Options: --project <id>, --ai-status <status>)
   task add <projId> <title>   Create a task
                               Options: --desc <text>, --status <todo|in-progress|review|done>,
-                                       --ai-status <ai-ready|agent-in-progress|human-review|human-only>,
+                                       --ai-status <ai-ready|agent-in-progress|needs-review|human-only>,
                                        --priority <low|medium|high|urgent>, --due <YYYY-MM-DD>
   task update <taskId>        Update a task
                               Options: --status <todo|in-progress|review|done>,
-                                       --ai-status <status>, --priority <priority>
+                                       --ai-status <ai-ready|agent-in-progress|needs-review|human-only|ai-completed>,
+                                       --priority <priority>
   context <projectId>         Output LLM-ready prompt context for an AI agent
   log <message>               Append an entry to the dashboard activity log
                               Options: --actor <ai|human>
@@ -245,7 +246,11 @@ async function run() {
         if (sub === 'list') {
           const filter = {};
           if (flags.project) filter.projectId = flags.project;
-          if (flags['ai-status']) filter.aiStatus = flags['ai-status'];
+          if (flags['ai-status']) {
+            let s = flags['ai-status'];
+            if (s === 'human-review' || s === 'needs review') s = 'needs-review';
+            filter.aiStatus = s;
+          }
           if (flags.status) filter.status = flags.status;
 
           const tasks = storage.getTasks(filter);
@@ -265,12 +270,16 @@ async function run() {
             console.error('Error: Usage: node bin/dashboard.js task add <projectId> <title> [options]');
             process.exit(1);
           }
+          let aiStatus = flags['ai-status'] || 'ai-ready';
+          if (aiStatus === 'human-review' || aiStatus === 'needs review') {
+            aiStatus = 'needs-review';
+          }
           const task = storage.createTask({
             projectId,
             title,
             description: flags.desc || '',
             status: flags.status || 'todo',
-            aiStatus: flags['ai-status'] || 'ai-ready',
+            aiStatus,
             priority: flags.priority || 'medium',
             dueDate: flags.due || '',
             actor: flags.actor || 'ai'
@@ -288,7 +297,11 @@ async function run() {
           }
           const updates = { actor: flags.actor || 'ai' };
           if (flags.status) updates.status = flags.status;
-          if (flags['ai-status']) updates.aiStatus = flags['ai-status'];
+          if (flags['ai-status']) {
+            let s = flags['ai-status'];
+            if (s === 'human-review' || s === 'needs review') s = 'needs-review';
+            updates.aiStatus = s;
+          }
           if (flags.priority) updates.priority = flags.priority;
           if (flags.title) updates.title = flags.title;
 
@@ -360,13 +373,18 @@ async function run() {
       }
 
       case 'log': {
-        const message = args.slice(1).filter(a => !a.startsWith('--')).join(' ');
+        const message = args.slice(1).filter((a, idx, arr) => {
+          if (a.startsWith('--')) return false;
+          if (idx > 0 && arr[idx - 1].startsWith('--')) return false;
+          return true;
+        }).join(' ');
         if (!message) {
-          console.error('Error: Message required. Usage: node bin/dashboard.js log "message" [--actor ai|human]');
+          console.error('Error: Message required. Usage: node bin/dashboard.js log "message" [--actor ai|human] [--project <id>]');
           process.exit(1);
         }
         const actor = flags.actor || 'ai';
-        storage.logActivity(actor, 'Agent Log Entry', message);
+        const projectId = typeof flags.project === 'string' ? flags.project : undefined;
+        storage.logActivity(actor, 'Agent Log Entry', message, projectId);
         console.log(`Logged: [${actor}] ${message}`);
         break;
       }

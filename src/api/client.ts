@@ -57,6 +57,21 @@ export const api = {
     return res.json();
   },
 
+  async reorderTasks(payload: {
+    taskId: string;
+    status?: Task['status'];
+    aiStatus?: Task['aiStatus'];
+    orderedIds: string[];
+  }): Promise<Task> {
+    const res = await fetch(`${BASE_URL}/tasks/reorder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to reorder tasks');
+    return res.json();
+  },
+
   async deleteTask(id: string): Promise<boolean> {
     const res = await fetch(`${BASE_URL}/tasks/${id}`, {
       method: 'DELETE',

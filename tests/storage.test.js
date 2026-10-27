@@ -56,6 +56,39 @@ try {
   assert.strictEqual(testTask.aiStatus, 'ai-ready');
   console.log('PASS: Task creation with AI status verified.');
 
+  // Test 4b: Reorder Tasks & Stage Move
+  const testTask2 = storage.createTask({
+    projectId: 'proj-test-auto',
+    title: 'Second Automated Test Task',
+    status: 'todo',
+    aiStatus: 'ai-ready',
+    priority: 'medium'
+  });
+  const movedTask = storage.reorderTasks({
+    taskId: testTask2.id,
+    status: 'in-progress',
+    aiStatus: 'agent-in-progress',
+    orderedIds: [testTask2.id, testTask.id]
+  });
+  assert.strictEqual(movedTask.status, 'in-progress');
+  assert.strictEqual(movedTask.aiStatus, 'agent-in-progress');
+  assert.strictEqual(storage.getTask(testTask2.id).order, 1);
+  assert.strictEqual(storage.getTask(testTask.id).order, 2);
+  console.log('PASS: Task reordering and stage movement verified.');
+
+  // Test 4c: Agent task completion defaults to needs-review & normalizes human-review
+  const completedTask = storage.updateTask(testTask2.id, {
+    status: 'done',
+    actor: 'ai-agent'
+  });
+  assert.strictEqual(completedTask.status, 'done');
+  assert.strictEqual(completedTask.aiStatus, 'needs-review');
+  const legacyNormTask = storage.updateTask(testTask.id, {
+    aiStatus: 'human-review'
+  });
+  assert.strictEqual(legacyNormTask.aiStatus, 'needs-review');
+  console.log('PASS: Agent task completion default to needs-review & normalization verified.');
+
   // Test 5: AI Context Prompt Generation
   const aiContext = storage.getAIContext('proj-test-auto');
   assert(aiContext.includes('Automated Test Project'), 'Context should contain project name');

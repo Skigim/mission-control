@@ -140,7 +140,7 @@ When onboarding a new or existing local project into Mission Control (or asked t
 - `dashboard_get_project_context` — Fetch full LLM context & local git/file telemetry for a `projectId`.
 - `dashboard_create_project` — Register a new project.
 - `dashboard_update_project` — Update a project's `description` (Status line), `progress`, `status`, `health`, `techStack`, `repoUrl`, `tags`, or `aiGuidelines`.
-- `dashboard_add_task` / `dashboard_update_task` — Create or update project tasks (`todo`, `in-progress`, `review`, `done`; AI statuses: `ai-ready`, `agent-in-progress`, `human-review`, `human-only`, `ai-completed`).
+- `dashboard_add_task` / `dashboard_update_task` — Create or update project tasks (`todo`, `in-progress`, `review`, `done`; AI statuses: `ai-ready`, `agent-in-progress`, `needs-review`, `human-only`, `ai-completed`). Default tag when completed by an agent is `needs-review`.
 - `dashboard_log_activity` — Append an entry to the Mission Control activity stream.
 
 ### CLI Commands (`<MISSION_CONTROL_DIR>/bin/dashboard.js`)

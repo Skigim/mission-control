@@ -9,6 +9,7 @@ import {
 import { api } from './api/client';
 import { Navbar, TabType } from './components/Navbar';
 import { OverviewView } from './components/Overview/OverviewView';
+import { ProjectDetailView } from './components/ProjectDetail/ProjectDetailView';
 import { KanbanBoard } from './components/Kanban/KanbanBoard';
 import { TimelineView } from './components/Timeline/TimelineView';
 import { AgentLogView } from './components/AgentLog/AgentLogView';
@@ -44,8 +45,9 @@ export const App: React.FC = () => {
 
   const [isCLIModalOpen, setIsCLIModalOpen] = useState(false);
 
-  // Kanban view focus project
+  // Kanban view focus project & dedicated project page state
   const [kanbanInitialProjectId, setKanbanInitialProjectId] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -106,6 +108,31 @@ export const App: React.FC = () => {
     loadData();
   };
 
+  const handleReorderTasks = async (payload: {
+    taskId: string;
+    status?: Task['status'];
+    aiStatus?: Task['aiStatus'];
+    orderedIds: string[];
+  }) => {
+    // Optimistically update local task order and status for zero-flicker drag & drop
+    setTasks((prev) =>
+      prev.map((t) => {
+        const orderIndex = payload.orderedIds.indexOf(t.id);
+        const updated: Task = { ...t };
+        if (t.id === payload.taskId) {
+          if (payload.status !== undefined) updated.status = payload.status;
+          if (payload.aiStatus !== undefined) updated.aiStatus = payload.aiStatus;
+        }
+        if (orderIndex !== -1) {
+          updated.order = orderIndex + 1;
+        }
+        return updated;
+      })
+    );
+    await api.reorderTasks(payload);
+    loadData();
+  };
+
   const handleDeleteTask = async (id: string) => {
     if (confirm('Delete this task?')) {
       await api.deleteTask(id);
@@ -130,17 +157,33 @@ export const App: React.FC = () => {
   };
 
   // Activity Log
-  const handleAddLog = async (action: string, message: string, actor: 'human' | 'ai-agent') => {
+  const handleAddLog = async (
+    action: string,
+    message: string,
+    actor: 'human' | 'ai-agent',
+    projectId?: string
+  ) => {
     await fetch('/api/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, message, actor }),
+      body: JSON.stringify({ action, message, actor, projectId }),
     });
     loadData();
   };
 
   // Navigation Helpers
+  const handleTabChange = (tab: TabType) => {
+    setSelectedProjectId(null);
+    setCurrentTab(tab);
+  };
+
+  const handleSelectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setCurrentTab('overview');
+  };
+
   const handleViewInKanban = (projectId: string) => {
+    setSelectedProjectId(null);
     setKanbanInitialProjectId(projectId);
     setCurrentTab('kanban');
   };
@@ -182,9 +225,9 @@ export const App: React.FC = () => {
       {/* Top Navigation */}
       <Navbar
         currentTab={currentTab}
-        onTabChange={setCurrentTab}
+        onTabChange={handleTabChange}
         onNewProject={handleNewProject}
-        onNewTask={() => handleNewTask('todo')}
+        onNewTask={() => handleNewTask('todo', selectedProjectId || undefined)}
         onOpenCLIModal={() => setIsCLIModalOpen(true)}
         isLiveSynced={isLiveSynced}
       />
@@ -197,19 +240,52 @@ export const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {currentTab === 'overview' && (
-              <OverviewView
-                projects={projects}
-                tasks={tasks}
-                milestones={milestones}
-                onNewProject={handleNewProject}
-                onEditProject={handleEditProject}
-                onDeleteProject={handleDeleteProject}
-                onOpenAIContext={handleOpenAIContext}
-                onInspectLocal={handleInspectLocal}
-                onViewInKanban={handleViewInKanban}
-              />
-            )}
+            {currentTab === 'overview' &&
+              (() => {
+                const activeProject = selectedProjectId
+                  ? projects.find((p) => p.id === selectedProjectId)
+                  : null;
+
+                if (activeProject) {
+                  return (
+                    <ProjectDetailView
+                      project={activeProject}
+                      allProjects={projects}
+                      tasks={tasks}
+                      milestones={milestones}
+                      activityLog={activityLog}
+                      onBack={() => setSelectedProjectId(null)}
+                      onSelectProject={handleSelectProject}
+                      onEditProject={handleEditProject}
+                      onDeleteProject={handleDeleteProject}
+                      onOpenAIContext={handleOpenAIContext}
+                      onInspectLocal={handleInspectLocal}
+                      onViewInKanban={handleViewInKanban}
+                      onNewTask={handleNewTask}
+                      onEditTask={handleEditTask}
+                      onDeleteTask={handleDeleteTask}
+                      onUpdateTask={handleUpdateTask}
+                      onReorderTasks={handleReorderTasks}
+                      onAddLog={handleAddLog}
+                    />
+                  );
+                }
+
+                return (
+                  <OverviewView
+                    projects={projects}
+                    tasks={tasks}
+                    milestones={milestones}
+                    onSelectProject={handleSelectProject}
+                    onNewProject={handleNewProject}
+                    onEditProject={handleEditProject}
+                    onDeleteProject={handleDeleteProject}
+                    onOpenAIContext={handleOpenAIContext}
+                    onInspectLocal={handleInspectLocal}
+                    onViewInKanban={handleViewInKanban}
+                  />
+                );
+              })()}
 
             {currentTab === 'kanban' && (
               <KanbanBoard
@@ -219,6 +295,8 @@ export const App: React.FC = () => {
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
                 onUpdateTask={handleUpdateTask}
+                onReorderTasks={handleReorderTasks}
+                onSelectProject={handleSelectProject}
                 initialProjectId={kanbanInitialProjectId}
               />
             )}

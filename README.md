@@ -56,8 +56,8 @@ node bin/dashboard.js project update <projectId> --desc "Status line..." --stack
 # Add an AI-ready task
 node bin/dashboard.js task add <projectId> "Refactor API error handling" --ai-status ai-ready --priority high
 
-# Update task status
-node bin/dashboard.js task update <taskId> --status done --ai-status ai-completed
+# Update task status (default tag for agent completions is needs-review)
+node bin/dashboard.js task update <taskId> --status review --ai-status needs-review
 
 # Dump prompt context for an LLM
 node bin/dashboard.js context <projectId>

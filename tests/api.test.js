@@ -64,6 +64,23 @@ try {
   assert.strictEqual(newTask.title, 'REST API Test Task');
   console.log('PASS: POST /api/tasks verified.');
 
+  // Test 4b: POST /api/tasks/reorder
+  const reorderRes = await fetch(`http://localhost:${TEST_PORT}/api/tasks/reorder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      taskId: newTask.id,
+      status: 'review',
+      aiStatus: 'needs-review',
+      orderedIds: [newTask.id]
+    })
+  });
+  assert.strictEqual(reorderRes.status, 200);
+  const reorderedTask = await reorderRes.json();
+  assert.strictEqual(reorderedTask.status, 'review');
+  assert.strictEqual(reorderedTask.aiStatus, 'needs-review');
+  console.log('PASS: POST /api/tasks/reorder verified.');
+
   // Test 5: GET /api/ai-context/:projectId
   const contextRes = await fetch(`http://localhost:${TEST_PORT}/api/ai-context/${testProj.id}`);
   assert.strictEqual(contextRes.status, 200);

@@ -3,7 +3,7 @@ export type ProjectHealth = 'on-track' | 'at-risk' | 'blocked' | 'completed';
 export type PriorityLevel = 'low' | 'medium' | 'high' | 'urgent';
 
 export type TaskStatus = 'backlog' | 'todo' | 'in-progress' | 'review' | 'done';
-export type AIDelegationStatus = 'ai-ready' | 'agent-in-progress' | 'human-review' | 'human-only' | 'ai-completed';
+export type AIDelegationStatus = 'ai-ready' | 'agent-in-progress' | 'needs-review' | 'human-only' | 'ai-completed' | 'human-review' | 'needs review';
 
 export interface Project {
   id: string;
@@ -30,12 +30,21 @@ export interface LocalFileEntry {
   size?: number;
 }
 
+export interface GitCommitEntry {
+  hash: string;
+  subject: string;
+  author: string;
+  relativeDate: string;
+  isoDate: string;
+}
+
 export interface GitRepoStatus {
   isGitRepo: boolean;
   branch?: string;
   dirtyCount?: number;
   lastCommit?: string;
   remoteUrl?: string;
+  recentCommits?: GitCommitEntry[];
 }
 
 export interface LocalFolderInspection {
@@ -79,6 +88,7 @@ export interface ActivityLogItem {
   actor: 'human' | 'ai-agent';
   action: string;
   message: string;
+  projectId?: string;
 }
 
 export interface DashboardData {

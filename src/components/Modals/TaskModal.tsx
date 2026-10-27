@@ -35,7 +35,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTitle(editingTask.title);
       setDescription(editingTask.description || '');
       setStatus(editingTask.status);
-      setAiStatus(editingTask.aiStatus || 'ai-ready');
+      const initialAi = editingTask.aiStatus === 'human-review' || editingTask.aiStatus === 'needs review' ? 'needs-review' : (editingTask.aiStatus || 'ai-ready');
+      setAiStatus(initialAi);
       setPriority(editingTask.priority || 'medium');
       setDueDate(editingTask.dueDate || '');
     } else {
@@ -176,7 +177,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               >
                 <option value="ai-ready">ai-ready</option>
                 <option value="agent-in-progress">agent-in-progress</option>
-                <option value="human-review">human-review</option>
+                <option value="needs-review">needs review</option>
                 <option value="human-only">human-only</option>
                 <option value="ai-completed">ai-completed</option>
               </select>

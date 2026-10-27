@@ -279,6 +279,7 @@ function inspectGitRepo(dirPath) {
     const dirtyCount = statusOut ? statusOut.split(/\r?\n/).filter(Boolean).length : 0;
 
     let lastCommit = '';
+    const recentCommits = [];
     try {
       lastCommit = execFileSync('git', ['log', '-1', '--format=%h — %s (%cr)'], {
         cwd: dirPath,
@@ -286,6 +287,29 @@ function inspectGitRepo(dirPath) {
         timeout: 2000,
         stdio: ['ignore', 'pipe', 'ignore']
       }).trim();
+
+      const logOut = execFileSync('git', ['log', '-n', '15', '--format=%h%x09%s%x09%an%x09%cr%x09%cI'], {
+        cwd: dirPath,
+        encoding: 'utf-8',
+        timeout: 2500,
+        stdio: ['ignore', 'pipe', 'ignore']
+      }).trim();
+
+      if (logOut) {
+        for (const line of logOut.split(/\r?\n/)) {
+          if (!line.trim()) continue;
+          const [hash, subject, author, relativeDate, isoDate] = line.split('\t');
+          if (hash && subject) {
+            recentCommits.push({
+              hash,
+              subject,
+              author: author || 'Unknown',
+              relativeDate: relativeDate || '',
+              isoDate: isoDate || new Date().toISOString()
+            });
+          }
+        }
+      }
     } catch {
       // repo with no commits
     }
@@ -307,7 +331,8 @@ function inspectGitRepo(dirPath) {
       branch,
       dirtyCount,
       lastCommit,
-      remoteUrl
+      remoteUrl,
+      recentCommits
     };
   } catch {
     return {

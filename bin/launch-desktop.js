@@ -13,10 +13,75 @@ const electronBin = path.join(rootDir, 'node_modules', 'electron', 'dist', 'elec
 const args = isDev ? ['.', '--dev'] : ['.'];
 
 if (process.platform === 'win32') {
-  const argListStr = args.map((a) => `'${a}'`).join(',');
+  const quotedArgs = args.map((a) => `"${a}"`).join(' ');
+  const cmdLine = `"${electronBin}" ${quotedArgs}`;
   const psCommand = `
-    $p = Start-Process -FilePath '${electronBin.replace(/'/g, "''")}' -ArgumentList @(${argListStr}) -WorkingDirectory '${rootDir.replace(/'/g, "''")}' -WindowStyle Normal -PassThru
-    Wait-Process -Id $p.Id
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public class DesktopLauncher {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct STARTUPINFO {
+    public int cb;
+    public string lpReserved;
+    public string lpDesktop;
+    public string lpTitle;
+    public int dwX;
+    public int dwY;
+    public int dwXSize;
+    public int dwYSize;
+    public int dwXCountChars;
+    public int dwYCountChars;
+    public int dwFillAttribute;
+    public int dwFlags;
+    public short wShowWindow;
+    public short cbReserved2;
+    public IntPtr lpReserved2;
+    public IntPtr hStdInput;
+    public IntPtr hStdOutput;
+    public IntPtr hStdError;
+  }
+
+  [StructLayout(LayoutKind.Sequential)]
+  public struct PROCESS_INFORMATION {
+    public IntPtr hProcess;
+    public IntPtr hThread;
+    public int dwProcessId;
+    public int dwThreadId;
+  }
+
+  [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern bool CreateProcessW(
+    string lpApplicationName,
+    string lpCommandLine,
+    IntPtr lpProcessAttributes,
+    IntPtr lpThreadAttributes,
+    bool bInheritHandles,
+    uint dwCreationFlags,
+    IntPtr lpEnvironment,
+    string lpCurrentDirectory,
+    ref STARTUPINFO lpStartupInfo,
+    out PROCESS_INFORMATION lpProcessInformation
+  );
+
+  public static int LaunchOnDefaultDesktop(string cmdLine, string workDir) {
+    STARTUPINFO si = new STARTUPINFO();
+    si.cb = Marshal.SizeOf(si);
+    si.lpDesktop = "WinSta0\\\\Default";
+    si.dwFlags = 1; // STARTF_USESHOWWINDOW
+    si.wShowWindow = 1; // SW_SHOWNORMAL
+    PROCESS_INFORMATION pi;
+    bool ok = CreateProcessW(null, cmdLine, IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, workDir, ref si, out pi);
+    if (!ok) {
+      throw new Exception("CreateProcessW failed with error " + Marshal.GetLastWin32Error());
+    }
+    return pi.dwProcessId;
+  }
+}
+"@
+$pidLaunched = [DesktopLauncher]::LaunchOnDefaultDesktop('${cmdLine.replace(/'/g, "''")}', '${rootDir.replace(/'/g, "''")}')
+Wait-Process -Id $pidLaunched
   `;
   const child = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
     cwd: rootDir,

@@ -39,14 +39,18 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
         {/* Left: Brand + Navigation */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => onTabChange('overview')}
+            className="flex items-center gap-2.5 text-left hover:opacity-90 transition-opacity"
+          >
             <div className="w-5 h-5 rounded bg-zinc-100 flex items-center justify-center">
               <div className="w-2 h-2 bg-zinc-950 rounded-[1px]" />
             </div>
             <span className="font-semibold text-sm tracking-tight text-zinc-100">
               Mission Control
             </span>
-          </div>
+          </button>
 
           <nav className="flex items-center gap-0.5 bg-recessed p-0.5 rounded-md border border-subtle">
             {tabs.map((tab) => (

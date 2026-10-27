@@ -7,6 +7,7 @@ interface OverviewViewProps {
   projects: Project[];
   tasks: Task[];
   milestones?: Milestone[];
+  onSelectProject: (projectId: string) => void;
   onNewProject: () => void;
   onEditProject: (project: Project) => void;
   onDeleteProject: (id: string) => void;
@@ -18,6 +19,7 @@ interface OverviewViewProps {
 export const OverviewView: React.FC<OverviewViewProps> = ({
   projects,
   tasks,
+  onSelectProject,
   onNewProject,
   onEditProject,
   onDeleteProject,
@@ -34,7 +36,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
     const onTrack = active.filter(p => p.health === 'on-track');
     const aiReadyTasks = tasks.filter(t => t.aiStatus === 'ai-ready' && t.status !== 'done');
     const agentInProgress = tasks.filter(t => t.aiStatus === 'agent-in-progress' && t.status !== 'done');
-    const pendingReview = tasks.filter(t => t.aiStatus === 'human-review' || t.status === 'review');
+    const pendingReview = tasks.filter(t => t.aiStatus === 'needs-review' || t.aiStatus === 'needs review' || (t.aiStatus as string) === 'human-review' || t.status === 'review');
     const completedTasks = tasks.filter(t => t.status === 'done');
 
     return {
@@ -189,6 +191,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               key={project.id}
               project={project}
               tasks={tasks}
+              onSelectProject={onSelectProject}
               onEdit={onEditProject}
               onDelete={onDeleteProject}
               onOpenAIContext={onOpenAIContext}

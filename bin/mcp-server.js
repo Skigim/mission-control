@@ -219,7 +219,7 @@ const TOOLS = [
         },
         aiStatus: {
           type: 'string',
-          enum: ['ai-ready', 'agent-in-progress', 'human-review', 'human-only', 'ai-completed'],
+          enum: ['ai-ready', 'agent-in-progress', 'needs-review', 'needs review', 'human-only', 'ai-completed', 'human-review'],
           default: 'ai-ready',
         },
         priority: {
@@ -251,7 +251,8 @@ const TOOLS = [
         },
         aiStatus: {
           type: 'string',
-          enum: ['ai-ready', 'agent-in-progress', 'human-review', 'human-only', 'ai-completed'],
+          enum: ['ai-ready', 'agent-in-progress', 'needs-review', 'needs review', 'human-only', 'ai-completed', 'human-review'],
+          description: 'AI delegation status. Default tag for a task completed by an agent is "needs-review".',
         },
         priority: {
           type: 'string',

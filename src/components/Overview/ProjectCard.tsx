@@ -10,12 +10,14 @@ import {
   TerminalSquare,
   Code2,
   GitBranch,
-  FolderSearch
+  FolderSearch,
+  ArrowUpRight
 } from 'lucide-react';
 
 interface ProjectCardProps {
   project: Project;
   tasks: Task[];
+  onSelectProject: (projectId: string) => void;
   onEdit: (project: Project) => void;
   onDelete: (id: string) => void;
   onOpenAIContext: (project: Project) => void;
@@ -26,6 +28,7 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   tasks,
+  onSelectProject,
   onEdit,
   onDelete,
   onOpenAIContext,
@@ -135,13 +138,22 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           </div>
         </div>
 
-        {/* Title & Description */}
-        <h3 className="text-sm font-semibold text-zinc-100 mb-1 line-clamp-1">
-          {project.name}
-        </h3>
-        <p className="text-xs text-zinc-400 line-clamp-2 mb-3 leading-relaxed">
-          {project.description || 'No description provided.'}
-        </p>
+        {/* Title & Description (Click to Open Dedicated Project Page) */}
+        <div
+          onClick={() => onSelectProject(project.id)}
+          className="cursor-pointer group/title mb-3"
+          title={`Open ${project.name} page`}
+        >
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <h3 className="text-sm font-semibold text-zinc-100 group-hover/title:text-white line-clamp-1">
+              {project.name}
+            </h3>
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-500 group-hover/title:text-zinc-200 transition-colors shrink-0" />
+          </div>
+          <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+            {project.description || 'No description provided.'}
+          </p>
+        </div>
 
         {/* Local Folder & Git Status Bar */}
         {fsPath && (
@@ -244,12 +256,20 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {/* AI Action & Kanban Link Buttons */}
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => onOpenAIContext(project)}
+            onClick={() => onSelectProject(project.id)}
             className="btn-secondary flex-1"
+            title="Open dedicated project detail page"
+          >
+            <span>Open Project</span>
+            <ArrowUpRight className="w-3.5 h-3.5 text-zinc-400" />
+          </button>
+
+          <button
+            onClick={() => onOpenAIContext(project)}
+            className="btn-secondary px-2.5"
             title="Generate LLM prompt with project guidelines and active tasks"
           >
             <Terminal className="w-3.5 h-3.5 text-zinc-400" />
-            <span>AI Context</span>
           </button>
 
           {fsPath && (

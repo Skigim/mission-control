@@ -37,12 +37,18 @@ try {
   assert.strictEqual(createdTask.aiStatus, 'ai-ready');
   console.log('PASS: "dashboard task add ... --json" passed.');
 
-  // Test 5: dashboard task update
-  const updateTaskOutput = execSync(`node bin/dashboard.js task update "${createdTask.id}" --status done --ai-status ai-completed --json`, { encoding: 'utf-8' });
+  // Test 5: dashboard task update (agent completion defaults to needs-review)
+  const updateTaskOutput = execSync(`node bin/dashboard.js task update "${createdTask.id}" --status done --json`, { encoding: 'utf-8' });
   const updatedTask = JSON.parse(updateTaskOutput);
   assert.strictEqual(updatedTask.status, 'done');
-  assert.strictEqual(updatedTask.aiStatus, 'ai-completed');
-  console.log('PASS: "dashboard task update ... --json" passed.');
+  assert.strictEqual(updatedTask.aiStatus, 'needs-review');
+  console.log('PASS: "dashboard task update ... --json" agent completion default to needs-review passed.');
+
+  // Test 5b: dashboard task update with explicit needs-review and "needs review" flag
+  const explicitReviewOutput = execSync(`node bin/dashboard.js task update "${createdTask.id}" --ai-status "needs review" --json`, { encoding: 'utf-8' });
+  const explicitTask = JSON.parse(explicitReviewOutput);
+  assert.strictEqual(explicitTask.aiStatus, 'needs-review');
+  console.log('PASS: "dashboard task update ... --ai-status \'needs review\'" normalization passed.');
 
   // Test 6: dashboard context
   const contextOutput = execSync(`node bin/dashboard.js context "${createdProj.id}"`, { encoding: 'utf-8' });
