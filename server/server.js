@@ -17,6 +17,12 @@ const distDir = path.resolve(__dirname, '..', 'dist');
 export const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Validation failures carry a statusCode; everything else is a genuine 500.
+function sendError(res, err, fallbackMessage) {
+  const status = err?.statusCode || 500;
+  res.status(status).json({ error: err?.message || fallbackMessage });
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -125,14 +131,18 @@ app.post('/api/projects', (req, res) => {
     const created = storage.createProject(req.body);
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err, 'Failed to create project');
   }
 });
 
 app.put('/api/projects/:id', (req, res) => {
-  const updated = storage.updateProject(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Project not found' });
-  res.json(updated);
+  try {
+    const updated = storage.updateProject(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Project not found' });
+    res.json(updated);
+  } catch (err) {
+    sendError(res, err, 'Failed to update project');
+  }
 });
 
 app.delete('/api/projects/:id', (req, res) => {
@@ -155,7 +165,7 @@ app.post('/api/tasks', (req, res) => {
     const created = storage.createTask(req.body);
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err, 'Failed to create task');
   }
 });
 
@@ -165,14 +175,18 @@ app.post('/api/tasks/reorder', (req, res) => {
     if (!updated) return res.status(404).json({ error: 'Task not found' });
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err, 'Failed to reorder tasks');
   }
 });
 
 app.put('/api/tasks/:id', (req, res) => {
-  const updated = storage.updateTask(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Task not found' });
-  res.json(updated);
+  try {
+    const updated = storage.updateTask(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Task not found' });
+    res.json(updated);
+  } catch (err) {
+    sendError(res, err, 'Failed to update task');
+  }
 });
 
 app.delete('/api/tasks/:id', (req, res) => {
@@ -191,14 +205,18 @@ app.post('/api/milestones', (req, res) => {
     const created = storage.createMilestone(req.body);
     res.status(201).json(created);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendError(res, err, 'Failed to create milestone');
   }
 });
 
 app.put('/api/milestones/:id', (req, res) => {
-  const updated = storage.updateMilestone(req.params.id, req.body);
-  if (!updated) return res.status(404).json({ error: 'Milestone not found' });
-  res.json(updated);
+  try {
+    const updated = storage.updateMilestone(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Milestone not found' });
+    res.json(updated);
+  } catch (err) {
+    sendError(res, err, 'Failed to update milestone');
+  }
 });
 
 app.delete('/api/milestones/:id', (req, res) => {

@@ -41,6 +41,48 @@ const statusMdPath = process.env.MISSION_CONTROL_STATUS_PATH
   ? path.resolve(process.env.MISSION_CONTROL_STATUS_PATH)
   : path.join(rootDir, 'STATUS.md');
 
+export class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'ValidationError';
+    this.statusCode = 400;
+  }
+}
+
+export const PROJECT_STATUSES = ['planning', 'active', 'paused', 'review', 'completed'];
+export const HEALTH_STATES = ['on-track', 'at-risk', 'blocked', 'completed'];
+export const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
+export const TASK_STATUSES = ['backlog', 'todo', 'in-progress', 'review', 'done'];
+export const AI_STATUSES = [
+  'ai-ready',
+  'agent-in-progress',
+  'needs-review',
+  'needs review',
+  'human-only',
+  'ai-completed',
+  'human-review'
+];
+
+function assertEnum(value, allowed, field) {
+  if (value === undefined || value === null || value === '') return;
+  if (!allowed.includes(value)) {
+    throw new ValidationError(
+      `Invalid ${field} "${value}". Expected one of: ${allowed.join(', ')}.`
+    );
+  }
+}
+
+// Progress is clamped rather than rejected so a sloppy 150 still writes a usable
+// record; only a value that isn't a number at all is an error.
+function normalizeProgress(value, field = 'progress') {
+  if (value === undefined || value === null || value === '') return undefined;
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    throw new ValidationError(`Invalid ${field} "${value}". Expected a number between 0 and 100.`);
+  }
+  return Math.min(100, Math.max(0, Math.round(num)));
+}
+
 class StorageEngine extends EventEmitter {
   constructor() {
     super();
@@ -217,6 +259,17 @@ class StorageEngine extends EventEmitter {
 
   createProject(proj) {
     const data = this.read();
+
+    if (proj.id && (data.projects || []).some(p => p.id === proj.id)) {
+      throw new ValidationError(
+        `Project "${proj.id}" already exists. Use updateProject to change it, or pick a different id.`
+      );
+    }
+    assertEnum(proj.status, PROJECT_STATUSES, 'project status');
+    assertEnum(proj.health, HEALTH_STATES, 'project health');
+    assertEnum(proj.priority, PRIORITIES, 'project priority');
+    const progress = normalizeProgress(proj.progress);
+
     let inspected = null;
     if (proj.localPath) {
       inspected = inspectLocalDirectory(proj.localPath);
@@ -230,7 +283,7 @@ class StorageEngine extends EventEmitter {
       health: proj.health || 'on-track',
       priority: proj.priority || 'medium',
       category: proj.category || 'General',
-      progress: Number(proj.progress) || 0,
+      progress: progress ?? 0,
       startDate: proj.startDate || new Date().toISOString().split('T')[0],
       targetDate: proj.targetDate || '',
       tags: Array.isArray(proj.tags) && proj.tags.length > 0
@@ -254,9 +307,18 @@ class StorageEngine extends EventEmitter {
     const index = data.projects.findIndex(p => p.id === id);
     if (index === -1) return null;
 
+    if (updates.id !== undefined && updates.id !== id) {
+      throw new ValidationError(`Project id cannot be changed ("${id}" -> "${updates.id}").`);
+    }
+    assertEnum(updates.status, PROJECT_STATUSES, 'project status');
+    assertEnum(updates.health, HEALTH_STATES, 'project health');
+    assertEnum(updates.priority, PRIORITIES, 'project priority');
+    const progress = normalizeProgress(updates.progress);
+
     data.projects[index] = {
       ...data.projects[index],
       ...updates,
+      ...(progress === undefined ? {} : { progress }),
       updatedAt: new Date().toISOString()
     };
 
@@ -302,6 +364,19 @@ class StorageEngine extends EventEmitter {
 
   createTask(task) {
     const data = this.read();
+
+    if (!task.projectId || !(data.projects || []).some(p => p.id === task.projectId)) {
+      throw new ValidationError(
+        `Project "${task.projectId || ''}" not found. A task must belong to an existing project.`
+      );
+    }
+    if (task.id && (data.tasks || []).some(t => t.id === task.id)) {
+      throw new ValidationError(`Task "${task.id}" already exists.`);
+    }
+    assertEnum(task.status, TASK_STATUSES, 'task status');
+    assertEnum(task.aiStatus, AI_STATUSES, 'task aiStatus');
+    assertEnum(task.priority, PRIORITIES, 'task priority');
+
     let initialAiStatus = task.aiStatus || 'ai-ready';
     if (initialAiStatus === 'human-review' || initialAiStatus === 'needs review') {
       initialAiStatus = 'needs-review';
@@ -329,6 +404,16 @@ class StorageEngine extends EventEmitter {
     const data = this.read();
     const index = data.tasks.findIndex(t => t.id === id);
     if (index === -1) return null;
+
+    assertEnum(updates.status, TASK_STATUSES, 'task status');
+    assertEnum(updates.aiStatus, AI_STATUSES, 'task aiStatus');
+    assertEnum(updates.priority, PRIORITIES, 'task priority');
+    if (
+      updates.projectId !== undefined &&
+      !(data.projects || []).some(p => p.id === updates.projectId)
+    ) {
+      throw new ValidationError(`Project "${updates.projectId}" not found.`);
+    }
 
     const currentTask = data.tasks[index];
     const finalUpdates = { ...updates };
@@ -368,6 +453,9 @@ class StorageEngine extends EventEmitter {
     const data = this.read();
     const targetTask = (data.tasks || []).find(t => t.id === taskId);
     if (!targetTask) return null;
+
+    assertEnum(status, TASK_STATUSES, 'task status');
+    assertEnum(aiStatus, AI_STATUSES, 'task aiStatus');
 
     const prevStatus = targetTask.status;
     if (status !== undefined) targetTask.status = status;
@@ -430,6 +518,16 @@ class StorageEngine extends EventEmitter {
   createMilestone(ms) {
     const data = this.read();
     if (!data.milestones) data.milestones = [];
+
+    if (!ms.projectId || !(data.projects || []).some(p => p.id === ms.projectId)) {
+      throw new ValidationError(
+        `Project "${ms.projectId || ''}" not found. A milestone must belong to an existing project.`
+      );
+    }
+    if (ms.id && data.milestones.some(m => m.id === ms.id)) {
+      throw new ValidationError(`Milestone "${ms.id}" already exists.`);
+    }
+
     const newMs = {
       id: ms.id || `ms-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 5)}`,
       projectId: ms.projectId,
