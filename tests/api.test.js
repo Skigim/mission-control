@@ -20,6 +20,8 @@ try {
   assert.strictEqual(healthRes.status, 200);
   const healthData = await healthRes.json();
   assert.strictEqual(healthData.status, 'ok');
+  assert(typeof healthData.installDir === 'string');
+  assert(typeof healthData.canonicalGlobalDir === 'string');
   console.log('PASS: GET /api/health verified.');
 
   // Test 2: GET /api/data
@@ -28,6 +30,7 @@ try {
   const fullData = await dataRes.json();
   assert(Array.isArray(fullData.projects));
   assert(Array.isArray(fullData.tasks));
+  assert(typeof fullData.installDir === 'string');
   console.log('PASS: GET /api/data verified.');
 
   // Test 3: POST /api/projects

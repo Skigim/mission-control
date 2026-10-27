@@ -76,6 +76,13 @@ try {
   assert.strictEqual(delResult.deleted, true);
   console.log('PASS: "dashboard project delete <id> --json" passed.');
 
+  // Test 7b: dashboard info --json
+  const infoOutput = execSync('node bin/dashboard.js info --json', { encoding: 'utf-8' });
+  const info = JSON.parse(infoOutput);
+  assert(typeof info.rootDir === 'string');
+  assert(typeof info.canonicalGlobalDir === 'string');
+  console.log('PASS: "dashboard info --json" passed.');
+
   console.log('All CLI integration tests passed.\n');
 } finally {
   storage.write(snapshot);

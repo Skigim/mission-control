@@ -96,6 +96,13 @@ try {
   assert(aiContext.includes('Automated Test Task'), 'Context should contain task');
   console.log('PASS: AI Context prompt generation verified.');
 
+  // Test 5b: Storage Paths & Canonical Global Directory
+  const paths = storage.getPaths();
+  assert(typeof paths.rootDir === 'string' && paths.rootDir.length > 0);
+  assert(typeof paths.dataDir === 'string' && paths.dataDir.includes('data'));
+  assert(typeof paths.canonicalGlobalDir === 'string' && paths.canonicalGlobalDir.includes('.mission-control'));
+  console.log('PASS: Storage paths and canonical global directory verified.');
+
   // Clean up test project
   storage.deleteProject('proj-test-auto');
   assert(!storage.getProject('proj-test-auto'), 'Test project should be deleted');

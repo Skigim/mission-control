@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { EventEmitter } from 'events';
 import { fileURLToPath } from 'url';
 import { initialData } from './seedData.js';
@@ -7,10 +8,22 @@ import { inspectLocalDirectory } from './localFs.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const dataDir = path.join(rootDir, 'data');
+const defaultRootDir = path.resolve(__dirname, '..');
+
+export const CANONICAL_GLOBAL_DIR = path.join(os.homedir(), '.mission-control');
+
+const rootDir = process.env.MISSION_CONTROL_DIR
+  ? path.resolve(process.env.MISSION_CONTROL_DIR)
+  : defaultRootDir;
+
+const dataDir = process.env.MISSION_CONTROL_DATA_DIR
+  ? path.resolve(process.env.MISSION_CONTROL_DATA_DIR)
+  : path.join(rootDir, 'data');
+
 const dataFilePath = path.join(dataDir, 'dashboard.json');
-const statusMdPath = path.join(rootDir, 'STATUS.md');
+const statusMdPath = process.env.MISSION_CONTROL_STATUS_PATH
+  ? path.resolve(process.env.MISSION_CONTROL_STATUS_PATH)
+  : path.join(rootDir, 'STATUS.md');
 
 class StorageEngine extends EventEmitter {
   constructor() {
@@ -638,6 +651,16 @@ class StorageEngine extends EventEmitter {
       inspection,
       cliCommand,
       prompt
+    };
+  }
+
+  getPaths() {
+    return {
+      rootDir,
+      dataDir,
+      dataFilePath,
+      statusMdPath,
+      canonicalGlobalDir: CANONICAL_GLOBAL_DIR
     };
   }
 }

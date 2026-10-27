@@ -14,7 +14,7 @@ export const CLIHelpModal: React.FC<CLIHelpModalProps> = ({ isOpen, onClose }) =
   const repoUrl = 'https://github.com/Skigim/mission-control';
   const skillRawUrl = 'https://raw.githubusercontent.com/Skigim/mission-control/main/skills/mission-control/SKILL.md';
 
-  const oneLineBootstrapPrompt = `Fetch and read ${skillRawUrl} (from ${repoUrl}) and execute Workflow 1 (Full Agent & Harness Setup): locate or clone the Mission Control tool and inspect your own agent harness, install the mission-control skill in your global scope, connect the Mission Control MCP server, and report back (or inform me if your harness restricts global setup).`;
+  const oneLineBootstrapPrompt = `Fetch and read ${skillRawUrl} (from ${repoUrl}) and execute Workflow 1 (Full Agent & Harness Setup): locate or clone Mission Control to its canonical global directory (~/.mission-control), install the mission-control skill globally, connect the MCP server, and report back (or inform me if your harness restricts global setup).`;
 
   const mcpConfigJson = `{
   "mcpServers": {
@@ -89,7 +89,7 @@ export const CLIHelpModal: React.FC<CLIHelpModalProps> = ({ isOpen, onClose }) =
             </button>
           </div>
           <p className="text-xs text-zinc-400">
-            Or add manually to your MCP client configuration (replace <code className="text-zinc-200 font-mono">&lt;MISSION_CONTROL_DIR&gt;</code> with your local clone path):
+            Or add manually to your MCP client configuration (replace <code className="text-zinc-200 font-mono">&lt;MISSION_CONTROL_DIR&gt;</code> with your shared global install path, e.g. <code className="text-zinc-200 font-mono">~/.mission-control</code>):
           </p>
           <pre className="p-3 surface-recessed font-mono text-[11px] text-zinc-300 overflow-x-auto">
             {mcpConfigJson}
@@ -103,6 +103,10 @@ export const CLIHelpModal: React.FC<CLIHelpModalProps> = ({ isOpen, onClose }) =
         <div className="space-y-2 pt-3 border-t border-subtle">
           <h4 className="label-caps">3. Terminal CLI Commands</h4>
           <div className="space-y-1.5 font-mono text-[11px]">
+            <div className="p-2.5 surface-recessed text-zinc-300 flex items-center justify-between gap-4">
+              <span>node bin/dashboard.js info</span>
+              <span className="text-zinc-500 text-[10px] shrink-0"># Show installation &amp; DB paths</span>
+            </div>
             <div className="p-2.5 surface-recessed text-zinc-300 flex items-center justify-between gap-4">
               <span>node bin/dashboard.js onboard &lt;id|path&gt; [--create]</span>
               <span className="text-zinc-500 text-[10px] shrink-0"># Agent onboarding workflow</span>

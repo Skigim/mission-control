@@ -19,6 +19,7 @@ interface KanbanBoardProps {
   }) => void;
   onSelectProject?: (projectId: string) => void;
   initialProjectId?: string | null;
+  installDir?: string;
 }
 
 const COLUMNS: { id: TaskStatus; label: string; dotColor: string; description: string }[] = [
@@ -32,6 +33,7 @@ const COLUMNS: { id: TaskStatus; label: string; dotColor: string; description: s
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   projects,
   tasks,
+  installDir,
   onNewTask,
   onEditTask,
   onDeleteTask,
@@ -374,6 +376,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                       <TaskCard
                                         task={task}
                                         project={projects.find((p) => p.id === task.projectId)}
+                                        installDir={installDir}
                                         onEdit={onEditTask}
                                         onDelete={onDeleteTask}
                                         onUpdateTask={onUpdateTask}
@@ -467,6 +470,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <TaskCard
                               task={task}
                               project={projects.find((p) => p.id === task.projectId)}
+                              installDir={installDir}
                               onEdit={onEditTask}
                               onDelete={onDeleteTask}
                               onUpdateTask={onUpdateTask}

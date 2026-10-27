@@ -1,9 +1,12 @@
 import { Task, Project } from '../types';
 
-export function buildTaskAgentPrompt(task: Task, project?: Project): string {
+export function buildTaskAgentPrompt(task: Task, project?: Project, installDir?: string): string {
   const projectName = project?.name || task.projectId;
   const projectId = project?.id || task.projectId;
   const localDir = project?.localPath || '<LOCAL_PROJECT_DIRECTORY>';
+  const cliCmd = installDir
+    ? `node "${installDir.replace(/\//g, '\\')}\\bin\\dashboard.js"`
+    : `node "$HOME\\.mission-control\\bin\\dashboard.js"`;
 
   const lines: string[] = [
     `# AI AGENT TASK BRIEF: ${task.title}`,
@@ -52,13 +55,13 @@ export function buildTaskAgentPrompt(task: Task, project?: Project): string {
     `## ${project?.aiGuidelines?.trim() ? '4' : '3'}. Execution & Mission Control Sync Protocol`,
     `1. **Claim the task** in Mission Control before making changes:`,
     `   \`\`\`powershell`,
-    `   node "E:\\Documents\\Projects\\Personal Dashboard\\bin\\dashboard.js" task update ${task.id} --status in-progress --ai-status agent-in-progress`,
+    `   ${cliCmd} task update ${task.id} --status in-progress --ai-status agent-in-progress`,
     `   \`\`\``,
     `2. **Inspect & implement** the required changes inside \`${localDir}\`, adhering strictly to the project guidelines and running relevant tests/builds to verify.`,
     `3. **Complete the task & log your work** in Mission Control once verified:`,
     `   \`\`\`powershell`,
-    `   node "E:\\Documents\\Projects\\Personal Dashboard\\bin\\dashboard.js" task update ${task.id} --status review --ai-status needs-review`,
-    `   node "E:\\Documents\\Projects\\Personal Dashboard\\bin\\dashboard.js" log "Completed ${task.id} (${task.title}): <concise summary of changes>" --project ${projectId}`,
+    `   ${cliCmd} task update ${task.id} --status review --ai-status needs-review`,
+    `   ${cliCmd} log "Completed ${task.id} (${task.title}): <concise summary of changes>" --project ${projectId}`,
     `   \`\`\``
   );
 

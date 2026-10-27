@@ -13,7 +13,19 @@ A minimal, utilitarian local desktop and web dashboard designed for **AI-Native 
 Paste this single line into your AI agent (Antigravity, Claude Code, Codex, Cursor, Windsurf) to automate installing the `mission-control` skill in your global scope and connecting the MCP server:
 
 ```text
-Fetch and read https://raw.githubusercontent.com/Skigim/mission-control/main/skills/mission-control/SKILL.md (from https://github.com/Skigim/mission-control) and execute Workflow 1 (Full Agent & Harness Setup): locate or clone the Mission Control tool and inspect your own agent harness, install the mission-control skill in your global scope, connect the Mission Control MCP server, and report back (or inform me if your harness restricts global setup).
+Fetch and read https://raw.githubusercontent.com/Skigim/mission-control/main/skills/mission-control/SKILL.md (from https://github.com/Skigim/mission-control) and execute Workflow 1 (Full Agent & Harness Setup): locate or clone Mission Control to its canonical global directory (~/.mission-control), install the mission-control skill globally, connect the MCP server, and report back (or inform me if your harness restricts global setup).
+```
+
+### Shared Global Installation Directory
+To ensure every AI agent on your system utilizes the **exact same install and central database** (`data/dashboard.json`), Mission Control is anchored to a globally recognizable path:
+- **Windows**: `%USERPROFILE%\.mission-control` (e.g. `C:\Users\<username>\.mission-control`) or `$HOME\.mission-control`
+- **macOS / Linux**: `~/.mission-control` (e.g. `$HOME/.mission-control`)
+
+```bash
+# Clone to the canonical global directory
+git clone https://github.com/Skigim/mission-control.git ~/.mission-control
+cd ~/.mission-control
+npm install
 ```
 
 ---
@@ -62,11 +74,15 @@ node bin/dashboard.js task update <taskId> --status review --ai-status needs-rev
 # Dump prompt context for an LLM
 node bin/dashboard.js context <projectId>
 
+# Check global installation & database path
+node bin/dashboard.js info
+
 # Append to activity log
 node bin/dashboard.js log "Finished unit tests for storage engine" --actor ai
 ```
 
 ### 3. Manual MCP Server Registration
+Replace `<MISSION_CONTROL_DIR>` with your shared global install path (e.g. `~/.mission-control` or `%USERPROFILE%\.mission-control`):
 ```json
 {
   "mcpServers": {

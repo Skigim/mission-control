@@ -96,6 +96,9 @@ export interface DashboardData {
   tasks: Task[];
   milestones: Milestone[];
   activityLog: ActivityLogItem[];
+  installDir?: string;
+  dataDir?: string;
+  canonicalGlobalDir?: string;
 }
 
 declare global {

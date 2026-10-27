@@ -18,18 +18,42 @@ Mission Control ([https://github.com/Skigim/mission-control](https://github.com/
 When a user asks you to set up Mission Control, install this skill, or connect the MCP server, execute the following four steps in order.
 
 ### Step 1: Investigate & Locate the Mission Control Tool
-1. **Locate or Clone the Local Installation (`<MISSION_CONTROL_DIR>`)**:
-   - Check if the current working directory is already a Mission Control checkout (contains `bin/dashboard.js` and `bin/mcp-server.js`).
-   - Otherwise, search common local project directories (or existing MCP configuration files) for an existing checkout of `mission-control` / `personal-dashboard` containing `bin/dashboard.js` and `bin/mcp-server.js`.
-   - If not yet cloned on the user's machine, clone `https://github.com/Skigim/mission-control.git` into the user's preferred projects directory (or current workspace) and run `npm install`.
+To ensure all AI agents across the system share the exact same installation and central database (`data/dashboard.json`), Mission Control resides at a canonical global directory.
+
+1. **Locate or Clone the Shared Global Installation (`<MISSION_CONTROL_DIR>`)**:
+   - **Canonical Global Path**:
+     - **Windows**: `%USERPROFILE%\.mission-control` (e.g. `C:\Users\<username>\.mission-control`) or `$HOME\.mission-control`
+     - **macOS / Linux**: `~/.mission-control` (e.g. `$HOME/.mission-control`)
+   - **Investigation & Discovery Order**:
+     1. Check if `process.env.MISSION_CONTROL_DIR` is set.
+     2. Check if the canonical global path (`~/.mission-control` / `%USERPROFILE%\.mission-control`) exists and contains `bin/dashboard.js` and `bin/mcp-server.js`.
+     3. Check existing agent MCP configuration files (`~/.gemini/config/mcp_config.json`, `~/.claude.json`, `~/.cursor/mcp.json`, `~/.codeium/windsurf/mcp_config.json`, `~/.codex/config.toml`) for an existing `"mission-control"` entry; extract its script path and resolve its parent root directory.
+     4. Check existing standalone workspace directories on the system (e.g. `E:\Documents\Projects\Personal Dashboard` or `E:\Documents\Projects\mission-control` on Windows, or the current working directory if it is already a Mission Control checkout).
+   - **Installation / Clone Rule (Shared Global Directory)**:
+     - If Mission Control is **not found** in any of the above locations, clone it **exclusively** into the canonical global directory (`~/.mission-control` / `%USERPROFILE%\.mission-control`):
+       ```bash
+       git clone https://github.com/Skigim/mission-control.git ~/.mission-control
+       cd ~/.mission-control
+       npm install
+       ```
+       *(Windows PowerShell)*:
+       ```powershell
+       git clone https://github.com/Skigim/mission-control.git "$HOME\.mission-control"
+       Set-Location "$HOME\.mission-control"
+       npm install
+       ```
+     - **CRITICAL REQUIREMENT**: **NEVER** clone Mission Control into the current project workspace directory or arbitrary project subdirectories. All agents on the system must point to this single global installation so that projects, tasks, and the database (`data/dashboard.json`) are shared system-wide.
    - Record the resolved absolute path on disk as `<MISSION_CONTROL_DIR>`.
+
 2. **Verify Key Entrypoints in `<MISSION_CONTROL_DIR>`**:
    - CLI entrypoint: `<MISSION_CONTROL_DIR>/bin/dashboard.js`
    - Stdio MCP server entrypoint: `<MISSION_CONTROL_DIR>/bin/mcp-server.js`
    - Canonical skill file: `<MISSION_CONTROL_DIR>/skills/mission-control/SKILL.md` (and `https://raw.githubusercontent.com/Skigim/mission-control/main/skills/mission-control/SKILL.md`)
-   - Local data & live status: `<MISSION_CONTROL_DIR>/data/dashboard.json` and `<MISSION_CONTROL_DIR>/STATUS.md`
-3. **Verify CLI Execution**:
+   - Central database & live status: `<MISSION_CONTROL_DIR>/data/dashboard.json` and `<MISSION_CONTROL_DIR>/STATUS.md`
+
+3. **Verify CLI Execution & Storage Info**:
    ```bash
+   node "<MISSION_CONTROL_DIR>/bin/dashboard.js" info
    node "<MISSION_CONTROL_DIR>/bin/dashboard.js" list
    ```
 

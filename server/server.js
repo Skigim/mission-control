@@ -53,12 +53,26 @@ app.get('/api/events', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const paths = storage.getPaths();
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    installDir: paths.rootDir,
+    dataDir: paths.dataDir,
+    canonicalGlobalDir: paths.canonicalGlobalDir
+  });
 });
 
 // Full dataset
 app.get('/api/data', (req, res) => {
-  res.json(storage.read());
+  const data = storage.read();
+  const paths = storage.getPaths();
+  res.json({
+    ...data,
+    installDir: paths.rootDir,
+    dataDir: paths.dataDir,
+    canonicalGlobalDir: paths.canonicalGlobalDir
+  });
 });
 
 // Local Filesystem Endpoints

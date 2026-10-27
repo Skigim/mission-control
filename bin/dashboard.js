@@ -63,6 +63,7 @@ COMMANDS:
   context <projectId>         Output LLM-ready prompt context for an AI agent
   log <message>               Append an entry to the dashboard activity log
                               Options: --actor <ai|human>
+  info                        Show installation paths, canonical global dir, and database locations
   help                        Show this help message
 
 GLOBAL OPTIONS:
@@ -386,6 +387,21 @@ async function run() {
         const projectId = typeof flags.project === 'string' ? flags.project : undefined;
         storage.logActivity(actor, 'Agent Log Entry', message, projectId);
         console.log(`Logged: [${actor}] ${message}`);
+        break;
+      }
+
+      case 'info': {
+        const paths = storage.getPaths();
+        if (isJson) {
+          console.log(JSON.stringify(paths, null, 2));
+        } else {
+          console.log('\nMission Control — Global Installation & Storage Paths:');
+          console.log(`  Install Directory:        ${paths.rootDir}`);
+          console.log(`  Canonical Global Path:    ${paths.canonicalGlobalDir}`);
+          console.log(`  Data Directory:           ${paths.dataDir}`);
+          console.log(`  Database File:            ${paths.dataFilePath}`);
+          console.log(`  Status Markdown:          ${paths.statusMdPath}\n`);
+        }
         break;
       }
 

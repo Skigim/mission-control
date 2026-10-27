@@ -27,6 +27,7 @@ export const App: React.FC = () => {
   const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([]);
   const [isLiveSynced, setIsLiveSynced] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
+  const [installDir, setInstallDir] = useState<string | undefined>(undefined);
 
   // Modals state
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -56,6 +57,7 @@ export const App: React.FC = () => {
       setTasks(data.tasks || []);
       setMilestones(data.milestones || []);
       setActivityLog(data.activityLog || []);
+      if (data.installDir) setInstallDir(data.installDir);
       setLoading(false);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -291,6 +293,7 @@ export const App: React.FC = () => {
               <KanbanBoard
                 projects={projects}
                 tasks={tasks}
+                installDir={installDir}
                 onNewTask={handleNewTask}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}

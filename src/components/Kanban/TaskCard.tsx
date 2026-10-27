@@ -20,6 +20,7 @@ import {
 interface TaskCardProps {
   task: Task;
   project?: Project;
+  installDir?: string;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
   onUpdateTask?: (id: string, updates: Partial<Task>) => void;
@@ -42,6 +43,7 @@ const STAGES: { id: TaskStatus; label: string; dot: string }[] = [
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   project,
+  installDir,
   onEdit,
   onDelete,
   onUpdateTask,
@@ -54,7 +56,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const handleCopyPrompt = () => {
-    const prompt = buildTaskAgentPrompt(task, project);
+    const prompt = buildTaskAgentPrompt(task, project, installDir);
     navigator.clipboard.writeText(prompt);
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
