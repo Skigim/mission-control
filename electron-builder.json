@@ -10,12 +10,17 @@
     "dist/**/*",
     "electron/**/*",
     "server/**/*",
+    "bin/**/*",
     "assets/**/*",
     "package.json"
   ],
   "asar": true,
   "asarUnpack": [
-    "assets/**/*"
+    "assets/**/*",
+    "bin/**/*",
+    "server/**/*",
+    "node_modules/**/*",
+    "package.json"
   ],
   "win": {
     "target": [

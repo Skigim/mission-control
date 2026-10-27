@@ -17,6 +17,8 @@ Install or run Mission Control without needing Node.js or dev tooling:
 - **[Download Portable Archive (.zip)](https://github.com/Skigim/mission-control/releases/latest/download/Mission-Control-1.0.0-win-x64.zip)** — Portable standalone release (extract and launch `Mission Control.exe`)
 - Browse all versions on the **[GitHub Releases Page](https://github.com/Skigim/mission-control/releases)**.
 
+The packaged app also ships the CLI and MCP server (requires Node.js to run them) at `<install dir>\resources\app.asar.unpacked\bin\dashboard.js` and `...\mcp-server.js`. The packaged app, CLI and MCP all read and write the shared database in `~/.mission-control/data`.
+
 ---
 
 ## One-Line Agent Auto-Setup (Skill + MCP)
