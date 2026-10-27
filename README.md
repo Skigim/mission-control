@@ -3,8 +3,19 @@
 A minimal, utilitarian local desktop and web dashboard designed for **AI-Native workflows**. It bridges human project management with autonomous AI agent execution through a unified storage engine, an Electron desktop app with native local folder inspection, a **Model Context Protocol (MCP)** server, an **agent CLI**, an **Agent-Assisted Onboarding workflow**, and **continuous Markdown status synchronization**.
 
 - **Repository**: [https://github.com/Skigim/mission-control](https://github.com/Skigim/mission-control)
+- **Releases**: [https://github.com/Skigim/mission-control/releases/latest](https://github.com/Skigim/mission-control/releases/latest)
 - **Agent Skill**: [`skills/mission-control/SKILL.md`](./skills/mission-control/SKILL.md)
 - **Design System**: [`DESIGN.md`](./DESIGN.md)
+
+---
+
+## Download Packaged App (Windows x64)
+
+Install or run Mission Control without needing Node.js or dev tooling:
+
+- **[Download Mission Control Setup (.exe)](https://github.com/Skigim/mission-control/releases/latest/download/Mission.Control.Setup.1.0.0.exe)** — Recommended Windows installer (auto-registers Start Menu & Desktop shortcuts)
+- **[Download Portable Archive (.zip)](https://github.com/Skigim/mission-control/releases/latest/download/Mission-Control-1.0.0-win-x64.zip)** — Portable standalone release (extract and launch `Mission Control.exe`)
+- Browse all versions on the **[GitHub Releases Page](https://github.com/Skigim/mission-control/releases)**.
 
 ---
 
