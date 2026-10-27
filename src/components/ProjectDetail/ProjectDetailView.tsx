@@ -11,6 +11,8 @@ import {
 } from '../../types';
 import { api } from '../../api/client';
 import { TaskCard } from '../Kanban/TaskCard';
+import { KanbanBoard } from '../Kanban/KanbanBoard';
+import { TimelineView } from '../Timeline/TimelineView';
 import {
   ArrowLeft,
   FolderOpen,
@@ -31,7 +33,9 @@ import {
   Send,
   Copy,
   Check,
-  Activity
+  Activity,
+  CalendarRange,
+  ListChecks
 } from 'lucide-react';
 
 interface ProjectDetailViewProps {
@@ -46,7 +50,6 @@ interface ProjectDetailViewProps {
   onDeleteProject: (id: string) => void;
   onOpenAIContext: (project: Project) => void;
   onInspectLocal: (project: Project) => void;
-  onViewInKanban: (projectId: string) => void;
   onNewTask: (defaultStatus?: TaskStatus, defaultProjectId?: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: string) => void;
@@ -57,8 +60,14 @@ interface ProjectDetailViewProps {
     aiStatus?: AIDelegationStatus;
     orderedIds: string[];
   }) => void;
+  installDir?: string;
   onAddLog: (action: string, message: string, actor: 'human' | 'ai-agent', projectId?: string) => void;
+  onCreateMilestone: (ms: Partial<Milestone>) => void;
+  onToggleMilestone: (id: string, completed: boolean) => void;
+  onDeleteMilestone: (id: string) => void;
 }
+
+type ProjectSection = 'tasks' | 'board' | 'milestones' | 'activity';
 
 type UnifiedActivityItem =
   | {
@@ -94,6 +103,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   project,
   allProjects,
   tasks,
+  milestones,
   activityLog,
   onBack,
   onSelectProject,
@@ -101,14 +111,18 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   onDeleteProject,
   onOpenAIContext,
   onInspectLocal,
-  onViewInKanban,
   onNewTask,
   onEditTask,
   onDeleteTask,
   onUpdateTask,
   onReorderTasks,
-  onAddLog
+  onAddLog,
+  installDir,
+  onCreateMilestone,
+  onToggleMilestone,
+  onDeleteMilestone
 }) => {
+  const [section, setSection] = useState<ProjectSection>('tasks');
   const [localInfo, setLocalInfo] = useState<LocalFolderInspection | null>(null);
   const [inspectingLocal, setInspectingLocal] = useState(false);
   const [taskStageFilter, setTaskStageFilter] = useState<'all' | TaskStatus>('all');
@@ -344,7 +358,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           </button>
 
           <button
-            onClick={() => onViewInKanban(project.id)}
+            onClick={() => setSection('board')}
             className="btn-secondary"
             title="Open Project in Full Board"
           >
@@ -579,7 +593,56 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         )}
       </div>
 
+      {/* Project Sections: Tasks / Board / Milestones / Activity */}
+      <nav className="flex items-center gap-0.5 bg-recessed p-0.5 rounded-md border border-subtle self-start w-fit">
+        {([
+          { id: 'tasks', label: 'Tasks', icon: <ListChecks className="w-3.5 h-3.5" /> },
+          { id: 'board', label: 'Board', icon: <Kanban className="w-3.5 h-3.5" /> },
+          { id: 'milestones', label: 'Milestones', icon: <CalendarRange className="w-3.5 h-3.5" /> },
+          { id: 'activity', label: 'Activity', icon: <Activity className="w-3.5 h-3.5" /> }
+        ] as { id: ProjectSection; label: string; icon: React.ReactNode }[]).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setSection(tab.id)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              section === tab.id
+                ? 'bg-elevated text-zinc-100 border border-subtle'
+                : 'text-zinc-400 hover:text-zinc-200 border border-transparent'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {section === 'board' && (
+        <KanbanBoard
+          projects={allProjects}
+          tasks={tasks}
+          projectId={project.id}
+          installDir={installDir}
+          onNewTask={onNewTask}
+          onEditTask={onEditTask}
+          onDeleteTask={onDeleteTask}
+          onUpdateTask={onUpdateTask}
+          onReorderTasks={onReorderTasks}
+        />
+      )}
+
+      {section === 'milestones' && (
+        <TimelineView
+          projectId={project.id}
+          milestones={milestones}
+          onCreateMilestone={onCreateMilestone}
+          onToggleMilestone={onToggleMilestone}
+          onDeleteMilestone={onDeleteMilestone}
+        />
+      )}
+
       {/* Project Tasks Section (Horizontal Task Cards) */}
+      {section === 'tasks' && (
       <section className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-3">
@@ -696,8 +759,10 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           </DragDropContext>
         )}
       </section>
+      )}
 
       {/* Bottom Grid: Combined Recent Activity Feed (2 cols) + Quick Log & AI Guidelines (1 col) */}
+      {section === 'activity' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         {/* Left 2 Columns: Combined Recent Activity (Mission Control Logs + Local Git Commits) */}
         <div className="lg:col-span-2 surface-panel flex flex-col">
@@ -909,6 +974,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

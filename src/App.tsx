@@ -7,12 +7,9 @@ import {
   TaskStatus 
 } from './types';
 import { api } from './api/client';
-import { Navbar, TabType } from './components/Navbar';
+import { Navbar } from './components/Navbar';
 import { OverviewView } from './components/Overview/OverviewView';
 import { ProjectDetailView } from './components/ProjectDetail/ProjectDetailView';
-import { KanbanBoard } from './components/Kanban/KanbanBoard';
-import { TimelineView } from './components/Timeline/TimelineView';
-import { AgentLogView } from './components/AgentLog/AgentLogView';
 import { ProjectModal } from './components/Modals/ProjectModal';
 import { TaskModal } from './components/Modals/TaskModal';
 import { AIContextModal } from './components/Modals/AIContextModal';
@@ -20,7 +17,6 @@ import { CLIHelpModal } from './components/Modals/CLIHelpModal';
 import { LocalInspectorModal } from './components/Modals/LocalInspectorModal';
 
 export const App: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState<TabType>('overview');
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -46,8 +42,7 @@ export const App: React.FC = () => {
 
   const [isCLIModalOpen, setIsCLIModalOpen] = useState(false);
 
-  // Kanban view focus project & dedicated project page state
-  const [kanbanInitialProjectId, setKanbanInitialProjectId] = useState<string | null>(null);
+  // Dedicated project page state
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -174,20 +169,8 @@ export const App: React.FC = () => {
   };
 
   // Navigation Helpers
-  const handleTabChange = (tab: TabType) => {
-    setSelectedProjectId(null);
-    setCurrentTab(tab);
-  };
-
   const handleSelectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
-    setCurrentTab('overview');
-  };
-
-  const handleViewInKanban = (projectId: string) => {
-    setSelectedProjectId(null);
-    setKanbanInitialProjectId(projectId);
-    setCurrentTab('kanban');
   };
 
   const handleOpenAIContext = (project: Project) => {
@@ -226,8 +209,7 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-canvas flex flex-col">
       {/* Top Navigation */}
       <Navbar
-        currentTab={currentTab}
-        onTabChange={handleTabChange}
+        onHome={() => setSelectedProjectId(null)}
         onNewProject={handleNewProject}
         onNewTask={() => handleNewTask('todo', selectedProjectId || undefined)}
         onOpenCLIModal={() => setIsCLIModalOpen(true)}
@@ -242,84 +224,54 @@ export const App: React.FC = () => {
           </div>
         ) : (
           <>
-            {currentTab === 'overview' &&
-              (() => {
-                const activeProject = selectedProjectId
-                  ? projects.find((p) => p.id === selectedProjectId)
-                  : null;
+            {(() => {
+              const activeProject = selectedProjectId
+                ? projects.find((p) => p.id === selectedProjectId)
+                : null;
 
-                if (activeProject) {
-                  return (
-                    <ProjectDetailView
-                      project={activeProject}
-                      allProjects={projects}
-                      tasks={tasks}
-                      milestones={milestones}
-                      activityLog={activityLog}
-                      onBack={() => setSelectedProjectId(null)}
-                      onSelectProject={handleSelectProject}
-                      onEditProject={handleEditProject}
-                      onDeleteProject={handleDeleteProject}
-                      onOpenAIContext={handleOpenAIContext}
-                      onInspectLocal={handleInspectLocal}
-                      onViewInKanban={handleViewInKanban}
-                      onNewTask={handleNewTask}
-                      onEditTask={handleEditTask}
-                      onDeleteTask={handleDeleteTask}
-                      onUpdateTask={handleUpdateTask}
-                      onReorderTasks={handleReorderTasks}
-                      onAddLog={handleAddLog}
-                    />
-                  );
-                }
-
+              if (activeProject) {
                 return (
-                  <OverviewView
-                    projects={projects}
+                  <ProjectDetailView
+                    key={activeProject.id}
+                    project={activeProject}
+                    allProjects={projects}
                     tasks={tasks}
                     milestones={milestones}
+                    activityLog={activityLog}
+                    installDir={installDir}
+                    onBack={() => setSelectedProjectId(null)}
                     onSelectProject={handleSelectProject}
-                    onNewProject={handleNewProject}
                     onEditProject={handleEditProject}
                     onDeleteProject={handleDeleteProject}
                     onOpenAIContext={handleOpenAIContext}
                     onInspectLocal={handleInspectLocal}
-                    onViewInKanban={handleViewInKanban}
+                    onNewTask={handleNewTask}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
+                    onUpdateTask={handleUpdateTask}
+                    onReorderTasks={handleReorderTasks}
+                    onAddLog={handleAddLog}
+                    onCreateMilestone={handleCreateMilestone}
+                    onToggleMilestone={handleToggleMilestone}
+                    onDeleteMilestone={handleDeleteMilestone}
                   />
                 );
-              })()}
+              }
 
-            {currentTab === 'kanban' && (
-              <KanbanBoard
-                projects={projects}
-                tasks={tasks}
-                installDir={installDir}
-                onNewTask={handleNewTask}
-                onEditTask={handleEditTask}
-                onDeleteTask={handleDeleteTask}
-                onUpdateTask={handleUpdateTask}
-                onReorderTasks={handleReorderTasks}
-                onSelectProject={handleSelectProject}
-                initialProjectId={kanbanInitialProjectId}
-              />
-            )}
-
-            {currentTab === 'timeline' && (
-              <TimelineView
-                projects={projects}
-                milestones={milestones}
-                onCreateMilestone={handleCreateMilestone}
-                onToggleMilestone={handleToggleMilestone}
-                onDeleteMilestone={handleDeleteMilestone}
-              />
-            )}
-
-            {currentTab === 'agent-log' && (
-              <AgentLogView
-                activityLog={activityLog}
-                onAddLog={handleAddLog}
-              />
-            )}
+              return (
+                <OverviewView
+                  projects={projects}
+                  tasks={tasks}
+                  milestones={milestones}
+                  onSelectProject={handleSelectProject}
+                  onNewProject={handleNewProject}
+                  onEditProject={handleEditProject}
+                  onDeleteProject={handleDeleteProject}
+                  onOpenAIContext={handleOpenAIContext}
+                  onInspectLocal={handleInspectLocal}
+                />
+              );
+            })()}
           </>
         )}
       </main>

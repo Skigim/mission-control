@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, Project, TaskStatus, AIDelegationStatus } from '../../types';
 import { TaskCard } from './TaskCard';
@@ -17,8 +17,7 @@ interface KanbanBoardProps {
     aiStatus?: AIDelegationStatus;
     orderedIds: string[];
   }) => void;
-  onSelectProject?: (projectId: string) => void;
-  initialProjectId?: string | null;
+  projectId: string;
   installDir?: string;
 }
 
@@ -39,26 +38,19 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeleteTask,
   onUpdateTask,
   onReorderTasks,
-  onSelectProject,
-  initialProjectId
+  projectId
 }) => {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(initialProjectId || 'all');
+  const selectedProjectId = projectId;
   const [selectedAIStatus, setSelectedAIStatus] = useState<string>('all');
   const [activeStageTab, setActiveStageTab] = useState<'all' | TaskStatus>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (initialProjectId) {
-      setSelectedProjectId(initialProjectId);
-    }
-  }, [initialProjectId]);
-
   const baseFilteredTasks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return tasks
       .filter((t) => {
-        const matchesProject = selectedProjectId === 'all' || t.projectId === selectedProjectId;
+        const matchesProject = t.projectId === projectId;
         const matchesAI =
           selectedAIStatus === 'all' ||
           (selectedAIStatus === 'needs-review'
@@ -72,7 +64,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         return matchesProject && matchesAI && matchesQuery;
       })
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  }, [tasks, selectedProjectId, selectedAIStatus, searchQuery]);
+  }, [tasks, projectId, selectedAIStatus, searchQuery]);
 
   const tasksByStage = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = {
@@ -178,23 +170,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             />
           </div>
 
-          {/* Project Filter */}
-          <div className="flex items-center gap-2">
-            <span className="label-caps">Project</span>
-            <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="input-field w-auto"
-            >
-              <option value="all">All Projects ({projects.length})</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* AI Delegation Filter */}
           <div className="flex items-center gap-2">
             <span className="label-caps">Delegation</span>
@@ -216,10 +191,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {/* Quick Add */}
         <button
           onClick={() =>
-            onNewTask(
-              defaultNewTaskStage,
-              selectedProjectId !== 'all' ? selectedProjectId : undefined
-            )
+            onNewTask(defaultNewTaskStage, projectId)
           }
           className="btn-primary shrink-0"
         >
@@ -380,7 +352,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                         onEdit={onEditTask}
                                         onDelete={onDeleteTask}
                                         onUpdateTask={onUpdateTask}
-                                        onSelectProject={onSelectProject}
                                         hideProjectBadge={selectedProjectId !== 'all'}
                                         isDraggable={true}
                                         isDragging={dragSnapshot.isDragging}
@@ -474,7 +445,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               onEdit={onEditTask}
                               onDelete={onDeleteTask}
                               onUpdateTask={onUpdateTask}
-                              onSelectProject={onSelectProject}
                               hideProjectBadge={selectedProjectId !== 'all'}
                               isDraggable={true}
                               isDragging={dragSnapshot.isDragging}

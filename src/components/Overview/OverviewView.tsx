@@ -13,7 +13,6 @@ interface OverviewViewProps {
   onDeleteProject: (id: string) => void;
   onOpenAIContext: (project: Project) => void;
   onInspectLocal: (project: Project) => void;
-  onViewInKanban: (projectId: string) => void;
 }
 
 export const OverviewView: React.FC<OverviewViewProps> = ({
@@ -24,8 +23,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onEditProject,
   onDeleteProject,
   onOpenAIContext,
-  onInspectLocal,
-  onViewInKanban
+  onInspectLocal
 }) => {
   const [search, setSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -185,7 +183,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-3">
           {filteredProjects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -196,7 +194,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               onDelete={onDeleteProject}
               onOpenAIContext={onOpenAIContext}
               onInspectLocal={onInspectLocal}
-              onViewInKanban={onViewInKanban}
             />
           ))}
         </div>
