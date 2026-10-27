@@ -35,12 +35,20 @@
         "arch": [
           "x64"
         ]
+      },
+      {
+        "target": "zip",
+        "arch": [
+          "x64"
+        ]
       }
     ],
+    "artifactName": "Mission-Control-${version}-win-${arch}.${ext}",
     "icon": "assets/icon.ico"
   },
   "nsis": {
     "oneClick": false,
+    "artifactName": "Mission Control Setup ${version}.${ext}",
     "allowToChangeInstallationDirectory": true,
     "shortcutName": "Mission Control",
     "createDesktopShortcut": true,
