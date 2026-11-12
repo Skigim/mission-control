@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { Milestone } from '../../types';
+import { Milestone, Task } from '../../types';
 import {
   CheckCircle2,
   Circle,
   Plus,
-  Trash2
+  Trash2,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface TimelineViewProps {
   projectId: string;
   milestones: Milestone[];
+  tasks?: Task[];
   onCreateMilestone: (ms: Partial<Milestone>) => void;
   onToggleMilestone: (id: string, completed: boolean) => void;
   onDeleteMilestone: (id: string) => void;
@@ -18,6 +21,7 @@ interface TimelineViewProps {
 export const TimelineView: React.FC<TimelineViewProps> = ({
   projectId,
   milestones,
+  tasks = [],
   onCreateMilestone,
   onToggleMilestone,
   onDeleteMilestone
@@ -25,10 +29,18 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTargetDate, setNewTargetDate] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const sortedMilestones = milestones
     .filter((m) => m.projectId === projectId)
     .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+
+  const tasksByMilestone = tasks.reduce<Record<string, Task[]>>((acc, t) => {
+    if (!t.milestoneId) return acc;
+    if (!acc[t.milestoneId]) acc[t.milestoneId] = [];
+    acc[t.milestoneId].push(t);
+    return acc;
+  }, {});
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,49 +126,104 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           <p className="text-xs text-zinc-500 font-mono py-8 text-center">No milestones scheduled.</p>
         ) : (
           <div className="space-y-2">
-            {sortedMilestones.map((ms) => (
-              <div
-                key={ms.id}
-                className={`flex items-center justify-between p-3 rounded-md border transition-colors ${
-                  ms.completed
-                    ? 'bg-recessed/50 border-subtle/50 opacity-60'
-                    : 'bg-recessed border-subtle hover:border-strong'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={() => onToggleMilestone(ms.id, !ms.completed)}
-                    className="text-zinc-500 hover:text-zinc-200 transition-colors"
-                  >
-                    {ms.completed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-zinc-500" />
-                    )}
-                  </button>
-                  <p
-                    className={`text-xs font-medium ${
-                      ms.completed ? 'line-through text-zinc-500' : 'text-zinc-100'
-                    }`}
-                  >
-                    {ms.title}
-                  </p>
-                </div>
+            {sortedMilestones.map((ms) => {
+              const linked = tasksByMilestone[ms.id] || [];
+              const doneCount = linked.filter((t) => t.status === 'done').length;
+              const isExpanded = expandedId === ms.id;
 
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[11px] font-mono text-zinc-400 tabular-nums">
-                    {ms.targetDate}
-                  </span>
-                  <button
-                    onClick={() => onDeleteMilestone(ms.id)}
-                    className="text-zinc-500 hover:text-rose-400 p-1 rounded"
-                    title="Delete Milestone"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+              return (
+                <div
+                  key={ms.id}
+                  className={`rounded-md border transition-colors ${
+                    ms.completed
+                      ? 'bg-recessed/50 border-subtle/50 opacity-60'
+                      : 'bg-recessed border-subtle hover:border-strong'
+                  }`}
+                >
+                  <div className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <button
+                        onClick={() => onToggleMilestone(ms.id, !ms.completed)}
+                        className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                        title={ms.completed ? 'Mark as not achieved' : 'Mark as achieved'}
+                      >
+                        {ms.completed ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-zinc-500" />
+                        )}
+                      </button>
+                      <p
+                        className={`text-xs font-medium truncate ${
+                          ms.completed ? 'line-through text-zinc-500' : 'text-zinc-100'
+                        }`}
+                      >
+                        {ms.title}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isExpanded ? null : ms.id)}
+                        disabled={linked.length === 0}
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono tabular-nums ${
+                          linked.length === 0
+                            ? 'border-subtle/60 text-zinc-500 cursor-default'
+                            : 'border-subtle text-zinc-300 hover:border-strong hover:text-zinc-100'
+                        }`}
+                        title={
+                          linked.length === 0
+                            ? 'No tasks linked to this milestone'
+                            : isExpanded
+                              ? 'Hide linked tasks'
+                              : 'Show linked tasks'
+                        }
+                      >
+                        {linked.length > 0 && (
+                          isExpanded
+                            ? <ChevronDown className="w-3 h-3" />
+                            : <ChevronRight className="w-3 h-3" />
+                        )}
+                        <span>{doneCount}/{linked.length} tasks</span>
+                      </button>
+                      <span className="text-[11px] font-mono text-zinc-400 tabular-nums">
+                        {ms.targetDate}
+                      </span>
+                      <button
+                        onClick={() => onDeleteMilestone(ms.id)}
+                        className="text-zinc-500 hover:text-rose-400 p-1 rounded"
+                        title="Delete milestone (its tasks are kept and unlinked)"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded && linked.length > 0 && (
+                    <ul className="border-t border-subtle px-3 py-2 space-y-1.5">
+                      {linked.map((t) => (
+                        <li key={t.id} className="flex items-center gap-2 min-w-0">
+                          <span className="text-[11px] font-mono text-zinc-500 tabular-nums shrink-0">
+                            {t.status}
+                          </span>
+                          <span
+                            className={`text-xs truncate ${
+                              t.status === 'done' ? 'text-zinc-500 line-through' : 'text-zinc-200'
+                            }`}
+                          >
+                            {t.title}
+                          </span>
+                          <span className="text-[11px] font-mono text-zinc-600 tabular-nums shrink-0 ml-auto">
+                            {t.id}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

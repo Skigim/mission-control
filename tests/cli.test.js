@@ -84,6 +84,52 @@ try {
   assert.strictEqual(descClear.description, '', 'Bare --desc clears description');
   console.log('PASS: milestone/task CLI flag edge cases and error exits passed.');
 
+  // Test 5d3: --milestone on task add / update / list
+  const linkMs = JSON.parse(execSync(
+    `node bin/dashboard.js milestone add "${createdProj.id}" "CLI Link Milestone" --target 2026-12-15 --json`,
+    { encoding: 'utf-8' }
+  ));
+
+  const taskWithMs = JSON.parse(execSync(
+    `node bin/dashboard.js task add "${createdProj.id}" "CLI Linked Task" --milestone "${linkMs.id}" --json`,
+    { encoding: 'utf-8' }
+  ));
+  assert.strictEqual(taskWithMs.milestoneId, linkMs.id, '--milestone must link on task add');
+
+  const relinked = JSON.parse(execSync(
+    `node bin/dashboard.js task update "${createdTask.id}" --milestone "${linkMs.id}" --json`,
+    { encoding: 'utf-8' }
+  ));
+  assert.strictEqual(relinked.milestoneId, linkMs.id, '--milestone must link on task update');
+
+  const msFiltered = JSON.parse(execSync(
+    `node bin/dashboard.js task list --milestone "${linkMs.id}" --json`,
+    { encoding: 'utf-8' }
+  ));
+  assert.strictEqual(msFiltered.length, 2, 'task list --milestone must return only linked tasks');
+
+  const unlinked = JSON.parse(execSync(
+    `node bin/dashboard.js task update "${createdTask.id}" --milestone --json`,
+    { encoding: 'utf-8' }
+  ));
+  assert.strictEqual(unlinked.milestoneId, '', 'Bare --milestone must unlink');
+
+  // The CLI surfaces the storage validation for an unknown or cross-project milestone
+  assert.throws(
+    () => execSync(`node bin/dashboard.js task add "${createdProj.id}" "Bad Link" --milestone ms-nope`, { stdio: 'pipe' }),
+    'Unknown milestone should fail'
+  );
+
+  // Deleting the milestone keeps the linked task and clears its link
+  execSync(`node bin/dashboard.js milestone delete "${linkMs.id}" --json`, { encoding: 'utf-8' });
+  assert.strictEqual(
+    storage.getTask(taskWithMs.id).milestoneId,
+    '',
+    'Milestone delete must unlink the task, not delete it'
+  );
+  execSync(`node bin/dashboard.js task delete "${taskWithMs.id}" --json`, { encoding: 'utf-8' });
+  console.log('PASS: "task add|update|list --milestone" and milestone-delete unlink passed.');
+
   // Test 5e: task delete
   const taskDel = JSON.parse(execSync(`node bin/dashboard.js task delete "${createdTask.id}" --json`, { encoding: 'utf-8' }));
   assert.strictEqual(taskDel.deleted, true);

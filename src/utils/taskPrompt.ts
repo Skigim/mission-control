@@ -1,6 +1,11 @@
-import { Task, Project } from '../types';
+import { Task, Project, Milestone } from '../types';
 
-export function buildTaskAgentPrompt(task: Task, project?: Project, installDir?: string): string {
+export function buildTaskAgentPrompt(
+  task: Task,
+  project?: Project,
+  installDir?: string,
+  milestone?: Milestone
+): string {
   const projectName = project?.name || task.projectId;
   const projectId = project?.id || task.projectId;
   const localDir = project?.localPath || '<LOCAL_PROJECT_DIRECTORY>';
@@ -21,6 +26,13 @@ export function buildTaskAgentPrompt(task: Task, project?: Project, installDir?:
 
   if (task.dueDate) {
     lines.push(`- **Due Date**: \`${task.dueDate}\``);
+  }
+
+  if (task.milestoneId) {
+    const msLabel = milestone
+      ? `${milestone.title} (\`${milestone.id}\`, target ${milestone.targetDate || 'TBD'})`
+      : `\`${task.milestoneId}\``;
+    lines.push(`- **Milestone**: ${msLabel} — this task is part of delivering that checkpoint.`);
   }
 
   lines.push(

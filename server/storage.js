@@ -83,6 +83,27 @@ function normalizeProgress(value, field = 'progress') {
   return Math.min(100, Math.max(0, Math.round(num)));
 }
 
+// A task may be linked to at most one milestone, and only to a milestone of its
+// own project. An empty value clears the link.
+function resolveMilestoneLink(data, milestoneId, projectId) {
+  if (milestoneId === undefined) return undefined;
+  if (milestoneId === null || milestoneId === '') return '';
+
+  const milestone = (data.milestones || []).find(m => m.id === milestoneId);
+  if (!milestone) {
+    throw new ValidationError(
+      `Milestone "${milestoneId}" not found. A task can only be linked to an existing milestone.`
+    );
+  }
+  if (milestone.projectId !== projectId) {
+    throw new ValidationError(
+      `Milestone "${milestoneId}" belongs to project "${milestone.projectId}", not "${projectId}". ` +
+      `A task can only be linked to a milestone of its own project.`
+    );
+  }
+  return milestoneId;
+}
+
 class StorageEngine extends EventEmitter {
   constructor() {
     super();
@@ -234,8 +255,11 @@ class StorageEngine extends EventEmitter {
       if (pendingMilestones.length === 0) {
         md += `*No upcoming milestones.*\n\n`;
       } else {
+        const rollup = this.getMilestoneProgress(undefined, data);
         for (const m of pendingMilestones.slice(0, 5)) {
-          md += `- [ ] **${m.title}** (Target: ${m.targetDate})\n`;
+          const counts = rollup[m.id];
+          const linked = counts ? ` — ${counts.done}/${counts.total} tasks done` : '';
+          md += `- [ ] **${m.title}** (Target: ${m.targetDate})${linked}\n`;
         }
         md += `\n`;
       }
@@ -347,6 +371,7 @@ class StorageEngine extends EventEmitter {
     let tasks = data.tasks || [];
     if (filter.projectId) tasks = tasks.filter(t => t.projectId === filter.projectId);
     if (filter.status) tasks = tasks.filter(t => t.status === filter.status);
+    if (filter.milestoneId) tasks = tasks.filter(t => t.milestoneId === filter.milestoneId);
     if (filter.aiStatus) {
       if (filter.aiStatus === 'needs-review' || filter.aiStatus === 'needs review' || filter.aiStatus === 'human-review') {
         tasks = tasks.filter(t => t.aiStatus === 'needs-review' || t.aiStatus === 'needs review' || t.aiStatus === 'human-review');
@@ -376,6 +401,7 @@ class StorageEngine extends EventEmitter {
     assertEnum(task.status, TASK_STATUSES, 'task status');
     assertEnum(task.aiStatus, AI_STATUSES, 'task aiStatus');
     assertEnum(task.priority, PRIORITIES, 'task priority');
+    const milestoneId = resolveMilestoneLink(data, task.milestoneId, task.projectId);
 
     let initialAiStatus = task.aiStatus || 'ai-ready';
     if (initialAiStatus === 'human-review' || initialAiStatus === 'needs review') {
@@ -390,6 +416,7 @@ class StorageEngine extends EventEmitter {
       aiStatus: initialAiStatus,
       priority: task.priority || 'medium',
       dueDate: task.dueDate || '',
+      milestoneId: milestoneId || '',
       order: task.order ?? (data.tasks.filter(t => t.projectId === task.projectId).length + 1),
       createdAt: new Date().toISOString()
     };
@@ -417,6 +444,20 @@ class StorageEngine extends EventEmitter {
 
     const currentTask = data.tasks[index];
     const finalUpdates = { ...updates };
+
+    // The milestone link is validated against the project the task will END UP in.
+    const effectiveProjectId = updates.projectId ?? currentTask.projectId;
+    const resolvedMilestoneId = resolveMilestoneLink(data, updates.milestoneId, effectiveProjectId);
+    if (resolvedMilestoneId !== undefined) {
+      finalUpdates.milestoneId = resolvedMilestoneId;
+    } else if (
+      currentTask.milestoneId &&
+      effectiveProjectId !== currentTask.projectId
+    ) {
+      // Moving a task to another project leaves its old milestone behind rather
+      // than keeping a cross-project link.
+      finalUpdates.milestoneId = '';
+    }
 
     if (finalUpdates.aiStatus === 'human-review' || finalUpdates.aiStatus === 'needs review') {
       finalUpdates.aiStatus = 'needs-review';
@@ -552,11 +593,44 @@ class StorageEngine extends EventEmitter {
 
   deleteMilestone(id) {
     const data = this.read();
-    const before = (data.milestones || []).length;
+    const target = (data.milestones || []).find(m => m.id === id);
+    if (!target) return false;
+
     data.milestones = (data.milestones || []).filter(m => m.id !== id);
-    if (data.milestones.length === before) return false;
+
+    // Unlink instead of cascading: the tasks outlive the milestone.
+    const unlinked = (data.tasks || []).filter(t => t.milestoneId === id);
+    for (const t of unlinked) {
+      t.milestoneId = '';
+    }
+    if (unlinked.length > 0) {
+      this.logActivityInternal(
+        data,
+        'user',
+        'Milestone Deleted',
+        `Deleted milestone "${target.title}" and unlinked ${unlinked.length} task(s)`,
+        target.projectId
+      );
+    }
+
     this.write(data);
     return true;
+  }
+
+  // Linked-task rollup keyed by milestone id: { [milestoneId]: { done, total } }.
+  // `data` is passed in by callers that already hold a snapshot (notably
+  // generateStatusMarkdown, which runs mid-write and must not re-read the file).
+  getMilestoneProgress(projectId, data = this.read()) {
+    const rollup = {};
+    const tasks = (data.tasks || []).filter(
+      t => t.milestoneId && (!projectId || t.projectId === projectId)
+    );
+    for (const t of tasks) {
+      if (!rollup[t.milestoneId]) rollup[t.milestoneId] = { done: 0, total: 0 };
+      rollup[t.milestoneId].total += 1;
+      if (t.status === 'done') rollup[t.milestoneId].done += 1;
+    }
+    return rollup;
   }
 
   // Activity Log
@@ -658,6 +732,12 @@ class StorageEngine extends EventEmitter {
     prompt += `- Completed tasks: ${doneTasks.length} / ${projectTasks.length}\n`;
     if (milestones.length > 0) {
       prompt += `- Milestones: ${milestones.filter(m => m.completed).length} / ${milestones.length} achieved\n`;
+      const rollup = this.getMilestoneProgress(projectId, data);
+      for (const m of milestones) {
+        const counts = rollup[m.id];
+        if (!counts) continue;
+        prompt += `  - **${m.title}** (\`${m.id}\`, target ${m.targetDate || 'TBD'}): ${counts.done}/${counts.total} linked tasks done\n`;
+      }
     }
 
     prompt += `\n---\n*Instructions for AI Assistant*: You are assisting on project "${project.name}". Follow all guidelines above. When completing tasks or reporting status, reference task IDs and adhere to the project's architecture.\n`;

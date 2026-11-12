@@ -218,7 +218,7 @@ const TOOLS = [
   },
   {
     name: 'dashboard_list_tasks',
-    description: 'Lists tasks with their IDs, optionally filtered by project, workflow stage, or AI delegation status. Use this to discover task IDs before updating or deleting a task.',
+    description: 'Lists tasks with their IDs, optionally filtered by project, workflow stage, AI delegation status, or linked milestone. Use this to discover task IDs before updating or deleting a task.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -235,6 +235,10 @@ const TOOLS = [
           type: 'string',
           enum: ['ai-ready', 'agent-in-progress', 'needs-review', 'human-only', 'ai-completed'],
           description: 'Optional AI delegation status filter',
+        },
+        milestoneId: {
+          type: 'string',
+          description: 'Optional milestone ID filter — returns only tasks linked to that milestone',
         },
       },
     },
@@ -276,13 +280,17 @@ const TOOLS = [
           type: 'string',
           description: 'Due date in YYYY-MM-DD format',
         },
+        milestoneId: {
+          type: 'string',
+          description: 'Optional milestone to link this task to. Must be a milestone of the SAME project (use dashboard_list_milestones to find its ID).',
+        },
       },
       required: ['projectId', 'title'],
     },
   },
   {
     name: 'dashboard_update_task',
-    description: 'Updates an existing task\'s title, description, status (column), AI delegation status, priority, or due date.',
+    description: 'Updates an existing task\'s title, description, status (column), AI delegation status, priority, due date, or linked milestone.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -315,6 +323,10 @@ const TOOLS = [
           type: 'string',
           enum: ['low', 'medium', 'high', 'urgent'],
         },
+        milestoneId: {
+          type: 'string',
+          description: 'Milestone to link this task to — must belong to the task\'s own project. Pass an empty string to unlink.',
+        },
       },
       required: ['taskId'],
     },
@@ -335,7 +347,7 @@ const TOOLS = [
   },
   {
     name: 'dashboard_list_milestones',
-    description: 'Lists milestones, optionally filtered by project.',
+    description: 'Lists milestones, optionally filtered by project. Each row carries a linkedTasks { done, total } rollup of the tasks linked to that milestone.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -536,6 +548,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           projectId: toolArgs?.projectId,
           status: toolArgs?.status,
           aiStatus: toolArgs?.aiStatus,
+          milestoneId: toolArgs?.milestoneId,
         });
         return {
           content: [{ type: 'text', text: JSON.stringify(tasks, null, 2) }],
@@ -555,8 +568,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'dashboard_update_task': {
-        const { taskId, title, description, status, aiStatus, priority, dueDate } = toolArgs;
-        const updates = Object.fromEntries(Object.entries({ title, description, status, aiStatus, priority, dueDate })
+        const { taskId, title, description, status, aiStatus, priority, dueDate, milestoneId } = toolArgs;
+        const updates = Object.fromEntries(Object.entries({ title, description, status, aiStatus, priority, dueDate, milestoneId })
           .filter(([, v]) => v !== undefined));
         const updated = storage.updateTask(taskId, { ...updates, actor: 'ai' });
         if (!updated) {
@@ -569,7 +582,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: `Task "${updated.title}" (${updated.id}) updated: status=${updated.status}, aiStatus=${updated.aiStatus}.`,
+              text: `Task "${updated.title}" (${updated.id}) updated: status=${updated.status}, aiStatus=${updated.aiStatus}, milestone=${updated.milestoneId || 'none'}.`,
             },
           ],
         };
@@ -588,10 +601,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'dashboard_list_milestones': {
+        const rollup = storage.getMilestoneProgress(toolArgs?.projectId);
+        const withProgress = storage.getMilestones(toolArgs?.projectId).map(m => ({
+          ...m,
+          linkedTasks: rollup[m.id] || { done: 0, total: 0 },
+        }));
         return {
-          content: [
-            { type: 'text', text: JSON.stringify(storage.getMilestones(toolArgs?.projectId), null, 2) },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(withProgress, null, 2) }],
         };
       }
 

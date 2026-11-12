@@ -70,6 +70,8 @@ export interface Task {
   aiStatus: AIDelegationStatus;
   priority: PriorityLevel;
   dueDate?: string;
+  /** Optional link to a milestone of the SAME project. Empty string = unlinked. */
+  milestoneId?: string;
   order?: number;
   createdAt?: string;
 }

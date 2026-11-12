@@ -289,6 +289,7 @@ export const App: React.FC = () => {
         onClose={() => setIsTaskModalOpen(false)}
         onSave={handleSaveTask}
         projects={projects}
+        milestones={milestones}
         editingTask={editingTask}
         defaultStatus={defaultTaskStatus}
         defaultProjectId={defaultProjectId}

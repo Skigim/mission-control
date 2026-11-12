@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Task, Project, TaskStatus, AIDelegationStatus } from '../../types';
+import { Task, Project, Milestone, TaskStatus, AIDelegationStatus } from '../../types';
 import { buildTaskAgentPrompt } from '../../utils/taskPrompt';
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import {
@@ -13,6 +13,7 @@ import {
   Copy,
   Check,
   Calendar,
+  CalendarRange,
   FolderGit2,
   GripVertical
 } from 'lucide-react';
@@ -20,6 +21,7 @@ import {
 interface TaskCardProps {
   task: Task;
   project?: Project;
+  milestone?: Milestone;
   installDir?: string;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
@@ -43,6 +45,7 @@ const STAGES: { id: TaskStatus; label: string; dot: string }[] = [
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   project,
+  milestone,
   installDir,
   onEdit,
   onDelete,
@@ -56,7 +59,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   const handleCopyPrompt = () => {
-    const prompt = buildTaskAgentPrompt(task, project, installDir);
+    const prompt = buildTaskAgentPrompt(task, project, installDir, milestone);
     navigator.clipboard.writeText(prompt);
     setCopiedPrompt(true);
     setTimeout(() => setCopiedPrompt(false), 2000);
@@ -194,6 +197,22 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-400 tabular-nums px-1.5 py-0.5 rounded bg-recessed border border-subtle">
                 <Calendar className="w-3 h-3 text-zinc-500" />
                 {task.dueDate}
+              </span>
+            )}
+
+            {task.milestoneId && (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-300 px-1.5 py-0.5 rounded bg-recessed border border-subtle"
+                title={
+                  milestone
+                    ? `Milestone: ${milestone.title}${milestone.targetDate ? ` (target ${milestone.targetDate})` : ''}`
+                    : `Milestone ${task.milestoneId}`
+                }
+              >
+                <CalendarRange className="w-3 h-3 text-zinc-400 shrink-0" />
+                <span className="truncate max-w-[180px]">
+                  {milestone?.title || task.milestoneId}
+                </span>
               </span>
             )}
           </div>

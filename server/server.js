@@ -157,6 +157,7 @@ app.get('/api/tasks', (req, res) => {
   if (req.query.projectId) filter.projectId = req.query.projectId;
   if (req.query.status) filter.status = req.query.status;
   if (req.query.aiStatus) filter.aiStatus = req.query.aiStatus;
+  if (req.query.milestoneId) filter.milestoneId = req.query.milestoneId;
   res.json(storage.getTasks(filter));
 });
 

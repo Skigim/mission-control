@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Task, Project, TaskStatus, AIDelegationStatus } from '../../types';
+import { Task, Project, Milestone, TaskStatus, AIDelegationStatus } from '../../types';
 import { TaskCard } from './TaskCard';
 import { Plus, Search, Layers } from 'lucide-react';
 
 interface KanbanBoardProps {
   projects: Project[];
   tasks: Task[];
+  milestones?: Milestone[];
   onNewTask: (defaultStatus?: TaskStatus, defaultProjectId?: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: string) => void;
@@ -32,6 +33,7 @@ const COLUMNS: { id: TaskStatus; label: string; dotColor: string; description: s
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   projects,
   tasks,
+  milestones = [],
   installDir,
   onNewTask,
   onEditTask,
@@ -45,6 +47,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [activeStageTab, setActiveStageTab] = useState<'all' | TaskStatus>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  const milestonesById = useMemo(
+    () => new Map(milestones.map((m) => [m.id, m])),
+    [milestones]
+  );
 
   const baseFilteredTasks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -348,6 +355,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                                       <TaskCard
                                         task={task}
                                         project={projects.find((p) => p.id === task.projectId)}
+                                        milestone={milestonesById.get(task.milestoneId || '')}
                                         installDir={installDir}
                                         onEdit={onEditTask}
                                         onDelete={onDeleteTask}
@@ -441,6 +449,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <TaskCard
                               task={task}
                               project={projects.find((p) => p.id === task.projectId)}
+                              milestone={milestonesById.get(task.milestoneId || '')}
                               installDir={installDir}
                               onEdit={onEditTask}
                               onDelete={onDeleteTask}

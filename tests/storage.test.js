@@ -113,6 +113,103 @@ try {
   assert.strictEqual(storage.getMilestones('proj-test-auto').length, 0);
   console.log('PASS: Milestone CRUD & unknown-ID handling verified.');
 
+  // Task <-> Milestone linking
+  const linkMs = storage.createMilestone({
+    projectId: 'proj-test-auto',
+    title: 'Link Target Milestone',
+    targetDate: '2026-12-01'
+  });
+
+  // Link on create
+  const linkedOnCreate = storage.createTask({
+    projectId: 'proj-test-auto',
+    title: 'Task Linked On Create',
+    milestoneId: linkMs.id
+  });
+  assert.strictEqual(linkedOnCreate.milestoneId, linkMs.id);
+
+  // A task created without a milestone gets an empty link, not undefined
+  const unlinkedTask = storage.createTask({
+    projectId: 'proj-test-auto',
+    title: 'Task With No Milestone'
+  });
+  assert.strictEqual(unlinkedTask.milestoneId, '');
+
+  // Link, relink and unlink on update
+  assert.strictEqual(
+    storage.updateTask(unlinkedTask.id, { milestoneId: linkMs.id }).milestoneId,
+    linkMs.id
+  );
+  assert.strictEqual(
+    storage.updateTask(unlinkedTask.id, { milestoneId: '' }).milestoneId,
+    '',
+    'Empty milestoneId should unlink'
+  );
+
+  // Filter by milestone
+  assert.deepStrictEqual(
+    storage.getTasks({ milestoneId: linkMs.id }).map(t => t.id),
+    [linkedOnCreate.id],
+    'getTasks should filter by milestoneId'
+  );
+
+  // Rollup
+  const rollupBefore = storage.getMilestoneProgress('proj-test-auto');
+  assert.deepStrictEqual(rollupBefore[linkMs.id], { done: 0, total: 1 });
+  storage.updateTask(linkedOnCreate.id, { status: 'done', aiStatus: 'ai-completed' });
+  assert.deepStrictEqual(
+    storage.getMilestoneProgress('proj-test-auto')[linkMs.id],
+    { done: 1, total: 1 },
+    'Rollup should count done linked tasks'
+  );
+  console.log('PASS: Task milestone link, unlink, filter & rollup verified.');
+
+  // Unknown milestone is rejected
+  assert.throws(
+    () => storage.createTask({ projectId: 'proj-test-auto', title: 'Bad Link', milestoneId: 'ms-nope' }),
+    /Milestone "ms-nope" not found/,
+    'Linking to a non-existent milestone must throw'
+  );
+
+  // Cross-project link is rejected on create AND update
+  const otherProj = storage.createProject({ id: 'proj-test-other', name: 'Other Test Project' });
+  assert.throws(
+    () => storage.createTask({
+      projectId: otherProj.id,
+      title: 'Cross Project Link',
+      milestoneId: linkMs.id
+    }),
+    /belongs to project "proj-test-auto"/,
+    'Cross-project link must throw on create'
+  );
+  const otherTask = storage.createTask({ projectId: otherProj.id, title: 'Other Project Task' });
+  assert.throws(
+    () => storage.updateTask(otherTask.id, { milestoneId: linkMs.id }),
+    /A task can only be linked to a milestone of its own project/,
+    'Cross-project link must throw on update'
+  );
+  console.log('PASS: Cross-project and unknown milestone links rejected.');
+
+  // Moving a task to another project clears a now-invalid link
+  const movedAcross = storage.updateTask(linkedOnCreate.id, { projectId: otherProj.id });
+  assert.strictEqual(movedAcross.projectId, otherProj.id);
+  assert.strictEqual(movedAcross.milestoneId, '', 'Moving projects should clear the stale milestone link');
+  console.log('PASS: Stale milestone link cleared on project move.');
+
+  // Deleting a milestone keeps its tasks and unlinks them
+  const keptTask = storage.createTask({
+    projectId: 'proj-test-auto',
+    title: 'Task Surviving Milestone Deletion',
+    milestoneId: linkMs.id
+  });
+  assert.strictEqual(storage.deleteMilestone(linkMs.id), true);
+  const survivor = storage.getTask(keptTask.id);
+  assert(survivor, 'Task must survive deletion of its milestone');
+  assert.strictEqual(survivor.milestoneId, '', 'Deleted milestone must leave no dangling reference');
+  console.log('PASS: Milestone deletion unlinks tasks without deleting them.');
+
+  storage.deleteProject('proj-test-other');
+
   // Clean up test project
   storage.deleteProject('proj-test-auto');
   assert(!storage.getProject('proj-test-auto'), 'Test project should be deleted');

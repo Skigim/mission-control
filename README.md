@@ -86,13 +86,19 @@ node bin/dashboard.js task update <taskId> --status review --ai-status needs-rev
 
 # Edit or delete a task
 node bin/dashboard.js task update <taskId> --title "New title" --desc "New description" --due 2026-12-01
+
+# Link a task to a milestone of the same project (empty --milestone unlinks)
+node bin/dashboard.js task add <projectId> "Ship the installer" --milestone <milestoneId>
+node bin/dashboard.js task update <taskId> --milestone <milestoneId>
+node bin/dashboard.js task update <taskId> --milestone
+node bin/dashboard.js task list --milestone <milestoneId>
 node bin/dashboard.js task delete <taskId>
 
 # Manage milestones
 node bin/dashboard.js milestone add <projectId> "Beta release" --target 2026-12-01
 node bin/dashboard.js milestone list --project <projectId>
 node bin/dashboard.js milestone update <milestoneId> --completed true
-node bin/dashboard.js milestone delete <milestoneId>
+node bin/dashboard.js milestone delete <milestoneId>   # keeps its tasks, unlinking them
 
 # Dump prompt context for an LLM
 node bin/dashboard.js context <projectId>

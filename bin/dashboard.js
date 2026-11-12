@@ -51,18 +51,22 @@ COMMANDS:
   status <id> <status>        Update project status (planning|active|paused|review|completed)
                               Options: --health <on-track|at-risk|blocked|completed>
                                        --progress <0-100>
-  task list                   List tasks (Options: --project <id>, --ai-status <status>)
+  task list                   List tasks (Options: --project <id>, --ai-status <status>,
+                                       --status <status>, --milestone <milestoneId>)
   task add <projId> <title>   Create a task
                               Options: --desc <text>, --status <todo|in-progress|review|done>,
                                        --ai-status <ai-ready|agent-in-progress|needs-review|human-only>,
-                                       --priority <low|medium|high|urgent>, --due <YYYY-MM-DD>
+                                       --priority <low|medium|high|urgent>, --due <YYYY-MM-DD>,
+                                       --milestone <milestoneId> (same project as the task)
   task update <taskId>        Update a task
                               Options: --status <todo|in-progress|review|done>,
                                        --ai-status <ai-ready|agent-in-progress|needs-review|human-only|ai-completed>,
                                        --priority <priority>, --title <text>, --desc <text>,
-                                       --due <YYYY-MM-DD>
+                                       --due <YYYY-MM-DD>, --milestone <milestoneId>
+                                       (pass --milestone with no value to unlink)
   task delete <taskId>        Delete a task
   milestone list              List milestones (Options: --project <id>)
+                              Shows linked-task progress (done/total) per milestone
   milestone add <projId> <title>
                               Create a milestone (Options: --target <YYYY-MM-DD>, --completed)
   milestone update <id>       Update a milestone (Options: --title <text>, --target <YYYY-MM-DD>,
@@ -218,9 +222,20 @@ async function run() {
           if (proj.techStack) console.log(`Tech Stack: ${proj.techStack}`);
           if (proj.description) console.log(`\nDescription:\n  ${proj.description}`);
           if (proj.aiGuidelines) console.log(`\nAI Guidelines & Rules:\n  ${proj.aiGuidelines.replace(/\n/g, '\n  ')}`);
+          const projMilestones = storage.getMilestones(subOrId);
+          if (projMilestones.length > 0) {
+            const rollup = storage.getMilestoneProgress(subOrId);
+            console.log(`\nMilestones (${projMilestones.length}):`);
+            for (const m of projMilestones) {
+              const counts = rollup[m.id] || { done: 0, total: 0 };
+              console.log(`  - [${m.completed ? 'x' : ' '}] ${m.title} (${m.id}) [Target: ${m.targetDate || 'none'}] [Tasks: ${counts.done}/${counts.total}]`);
+            }
+          }
+          const msTitles = new Map(projMilestones.map(m => [m.id, m.title]));
           console.log(`\nTasks (${tasks.length}):`);
           for (const t of tasks) {
-            console.log(`  - [${t.status}] ${t.title} (${t.id}) [AI: ${t.aiStatus || 'none'}, Prio: ${t.priority}]`);
+            const msLabel = t.milestoneId ? ` -> ${msTitles.get(t.milestoneId) || t.milestoneId}` : '';
+            console.log(`  - [${t.status}] ${t.title} (${t.id}) [AI: ${t.aiStatus || 'none'}, Prio: ${t.priority}]${msLabel}`);
           }
           console.log('');
         }
@@ -262,14 +277,18 @@ async function run() {
             filter.aiStatus = s;
           }
           if (flags.status) filter.status = flags.status;
+          if (typeof flags.milestone === 'string') filter.milestoneId = flags.milestone;
 
           const tasks = storage.getTasks(filter);
           if (isJson) {
             console.log(JSON.stringify(tasks, null, 2));
           } else {
+            const milestonesById = new Map(storage.getMilestones().map(m => [m.id, m]));
             console.log(`\nTASKS (${tasks.length}):`);
             for (const t of tasks) {
-              console.log(`- [${t.status.toUpperCase()}] ${t.title} (${t.id}) [AI: ${t.aiStatus}, Prio: ${t.priority}] (Project: ${t.projectId})`);
+              const ms = t.milestoneId ? milestonesById.get(t.milestoneId) : null;
+              const msLabel = ms ? ` (Milestone: ${ms.title} [${ms.id}])` : '';
+              console.log(`- [${t.status.toUpperCase()}] ${t.title} (${t.id}) [AI: ${t.aiStatus}, Prio: ${t.priority}] (Project: ${t.projectId})${msLabel}`);
             }
             console.log('');
           }
@@ -292,6 +311,7 @@ async function run() {
             aiStatus,
             priority: flags.priority || 'medium',
             dueDate: flags.due || '',
+            milestoneId: typeof flags.milestone === 'string' ? flags.milestone : '',
             actor: flags.actor || 'ai'
           });
           if (isJson) {
@@ -316,6 +336,9 @@ async function run() {
           if (typeof flags.title === 'string') updates.title = flags.title;
           if (flags.desc !== undefined) updates.description = flags.desc === true ? '' : flags.desc;
           if (flags.due !== undefined) updates.dueDate = flags.due === true ? '' : flags.due;
+          if (flags.milestone !== undefined) {
+            updates.milestoneId = flags.milestone === true ? '' : flags.milestone;
+          }
 
           const updated = storage.updateTask(taskId, updates);
           if (!updated) {
@@ -325,7 +348,7 @@ async function run() {
           if (isJson) {
             console.log(JSON.stringify(updated, null, 2));
           } else {
-            console.log(`Updated task "${updated.title}" (${updated.id}): status=${updated.status}, aiStatus=${updated.aiStatus}`);
+            console.log(`Updated task "${updated.title}" (${updated.id}): status=${updated.status}, aiStatus=${updated.aiStatus}, milestone=${updated.milestoneId || 'none'}`);
           }
         } else if (sub === 'delete') {
           const taskId = args[2];
@@ -356,9 +379,11 @@ async function run() {
           if (isJson) {
             console.log(JSON.stringify(milestones, null, 2));
           } else {
+            const rollup = storage.getMilestoneProgress();
             console.log(`\nMILESTONES (${milestones.length}):`);
             for (const m of milestones) {
-              console.log(`- [${m.completed ? 'x' : ' '}] ${m.title} (${m.id}) [Target: ${m.targetDate || 'none'}] (Project: ${m.projectId})`);
+              const counts = rollup[m.id] || { done: 0, total: 0 };
+              console.log(`- [${m.completed ? 'x' : ' '}] ${m.title} (${m.id}) [Target: ${m.targetDate || 'none'}] [Tasks: ${counts.done}/${counts.total}] (Project: ${m.projectId})`);
             }
             console.log('');
           }

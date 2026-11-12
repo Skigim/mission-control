@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Task, Project, TaskStatus, AIDelegationStatus, PriorityLevel } from '../../types';
+import { Task, Project, Milestone, TaskStatus, AIDelegationStatus, PriorityLevel } from '../../types';
 import { X } from 'lucide-react';
 
 interface TaskModalProps {
@@ -7,6 +7,7 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (taskData: Partial<Task>) => void;
   projects: Project[];
+  milestones?: Milestone[];
   editingTask?: Task | null;
   defaultStatus?: TaskStatus;
   defaultProjectId?: string;
@@ -17,6 +18,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSave,
   projects,
+  milestones = [],
   editingTask,
   defaultStatus,
   defaultProjectId
@@ -28,6 +30,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [aiStatus, setAiStatus] = useState<AIDelegationStatus>('ai-ready');
   const [priority, setPriority] = useState<PriorityLevel>('medium');
   const [dueDate, setDueDate] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
 
   useEffect(() => {
     if (editingTask) {
@@ -39,6 +42,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setAiStatus(initialAi);
       setPriority(editingTask.priority || 'medium');
       setDueDate(editingTask.dueDate || '');
+      setMilestoneId(editingTask.milestoneId || '');
     } else {
       setProjectId(defaultProjectId || projects[0]?.id || '');
       setTitle('');
@@ -47,10 +51,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setAiStatus('ai-ready');
       setPriority('medium');
       setDueDate('');
+      setMilestoneId('');
     }
   }, [editingTask, isOpen, defaultStatus, defaultProjectId, projects]);
 
   if (!isOpen) return null;
+
+  // A task can only be linked to a milestone of its own project, so the options
+  // follow the project dropdown (this modal is also opened from the global board).
+  const projectMilestones = milestones
+    .filter((m) => m.projectId === projectId)
+    .sort((a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime());
+
+  const handleProjectChange = (nextProjectId: string) => {
+    setProjectId(nextProjectId);
+    // The previously selected milestone belongs to the previous project.
+    setMilestoneId('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +80,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       status,
       aiStatus,
       priority,
-      dueDate
+      dueDate,
+      milestoneId
     });
     onClose();
   };
@@ -92,7 +110,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <label className="form-label">Project *</label>
             <select
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
+              onChange={(e) => handleProjectChange(e.target.value)}
               required
               className="input-field"
             >
@@ -192,6 +210,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="input-field font-mono"
               />
             </div>
+          </div>
+
+          {/* Milestone link */}
+          <div>
+            <label className="form-label">Milestone</label>
+            <select
+              value={milestoneId}
+              onChange={(e) => setMilestoneId(e.target.value)}
+              disabled={projectMilestones.length === 0}
+              className="input-field"
+            >
+              <option value="">None</option>
+              {projectMilestones.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                  {m.targetDate ? ` — ${m.targetDate}` : ''}
+                </option>
+              ))}
+            </select>
+            {projectMilestones.length === 0 && (
+              <p className="text-[11px] text-zinc-500 font-mono pt-1">
+                This project has no milestones yet.
+              </p>
+            )}
           </div>
 
           {/* Actions */}

@@ -621,6 +621,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         <KanbanBoard
           projects={allProjects}
           tasks={tasks}
+          milestones={milestones}
           projectId={project.id}
           installDir={installDir}
           onNewTask={onNewTask}
@@ -635,6 +636,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         <TimelineView
           projectId={project.id}
           milestones={milestones}
+          tasks={projectTasks}
           onCreateMilestone={onCreateMilestone}
           onToggleMilestone={onToggleMilestone}
           onDeleteMilestone={onDeleteMilestone}
@@ -740,6 +742,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                           <TaskCard
                             task={task}
                             project={project}
+                            milestone={milestones.find((m) => m.id === task.milestoneId)}
                             onEdit={onEditTask}
                             onDelete={onDeleteTask}
                             onUpdateTask={onUpdateTask}
