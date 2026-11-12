@@ -640,6 +640,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           onCreateMilestone={onCreateMilestone}
           onToggleMilestone={onToggleMilestone}
           onDeleteMilestone={onDeleteMilestone}
+          onOpenTask={onEditTask}
         />
       )}
 

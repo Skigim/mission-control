@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Milestone, Task } from '../../types';
+import { Milestone, Task, TaskStatus } from '../../types';
 import {
   CheckCircle2,
   Circle,
@@ -16,7 +16,62 @@ interface TimelineViewProps {
   onCreateMilestone: (ms: Partial<Milestone>) => void;
   onToggleMilestone: (id: string, completed: boolean) => void;
   onDeleteMilestone: (id: string) => void;
+  /** Opens the full task (the task modal). */
+  onOpenTask?: (task: Task) => void;
 }
+
+const UNLINKED_KEY = '__unlinked__';
+
+const STATUS_DOT: Record<TaskStatus, string> = {
+  backlog: 'bg-zinc-500',
+  todo: 'bg-zinc-300',
+  'in-progress': 'bg-amber-400',
+  review: 'bg-indigo-400',
+  done: 'bg-emerald-400'
+};
+
+const TaskSectionList: React.FC<{
+  tasks: Task[];
+  onOpenTask?: (task: Task) => void;
+  emptyText?: string;
+}> = ({ tasks, onOpenTask, emptyText }) => {
+  if (tasks.length === 0) {
+    return (
+      <p className="border-t border-subtle px-3 py-2.5 pl-9 text-[11px] font-mono text-zinc-500">
+        {emptyText}
+      </p>
+    );
+  }
+  return (
+    <ul className="border-t border-subtle py-1">
+      {tasks.map((t) => (
+        <li key={t.id}>
+          <button
+            type="button"
+            onClick={() => onOpenTask?.(t)}
+            disabled={!onOpenTask}
+            className="group w-full flex items-center gap-2 min-w-0 px-3 py-1.5 pl-9 text-left hover:bg-elevated/40 transition-colors"
+            title={`Open task: ${t.title}`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[t.status]}`} />
+            <span
+              className={`text-xs truncate group-hover:underline underline-offset-2 ${
+                t.status === 'done'
+                  ? 'text-zinc-500 line-through'
+                  : 'text-zinc-200 group-hover:text-zinc-100'
+              }`}
+            >
+              {t.title}
+            </span>
+            <span className="text-[11px] font-mono text-zinc-600 tabular-nums shrink-0 ml-auto">
+              {t.status}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
   projectId,
@@ -24,12 +79,18 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   tasks = [],
   onCreateMilestone,
   onToggleMilestone,
-  onDeleteMilestone
+  onDeleteMilestone,
+  onOpenTask
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTargetDate, setNewTargetDate] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // A section is open by default while its milestone is pending and has tasks;
+  // a click records an explicit open/closed choice that overrides the default.
+  const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
+  const isOpen = (key: string, byDefault: boolean) => openOverrides[key] ?? byDefault;
+  const toggle = (key: string, current: boolean) =>
+    setOpenOverrides((prev) => ({ ...prev, [key]: !current }));
 
   const sortedMilestones = milestones
     .filter((m) => m.projectId === projectId)
@@ -41,6 +102,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     acc[t.milestoneId].push(t);
     return acc;
   }, {});
+
+  // A task whose milestone no longer exists is treated as unlinked.
+  const unlinkedTasks = tasks.filter(
+    (t) => !t.milestoneId || !sortedMilestones.some((m) => m.id === t.milestoneId)
+  );
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +186,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         </form>
       )}
 
-      {/* Milestones */}
+      {/* Milestones, each a collapsible section of its linked tasks */}
       <div className="surface-panel p-4 space-y-3">
         {sortedMilestones.length === 0 ? (
           <p className="text-xs text-zinc-500 font-mono py-8 text-center">No milestones scheduled.</p>
@@ -129,22 +195,22 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             {sortedMilestones.map((ms) => {
               const linked = tasksByMilestone[ms.id] || [];
               const doneCount = linked.filter((t) => t.status === 'done').length;
-              const isExpanded = expandedId === ms.id;
+              const isExpanded = isOpen(ms.id, !ms.completed && linked.length > 0);
 
               return (
                 <div
                   key={ms.id}
                   className={`rounded-md border transition-colors ${
                     ms.completed
-                      ? 'bg-recessed/50 border-subtle/50 opacity-60'
+                      ? 'bg-recessed/50 border-subtle/50'
                       : 'bg-recessed border-subtle hover:border-strong'
                   }`}
                 >
-                  <div className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2 p-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <button
                         onClick={() => onToggleMilestone(ms.id, !ms.completed)}
-                        className="text-zinc-500 hover:text-zinc-200 transition-colors"
+                        className="text-zinc-500 hover:text-zinc-200 transition-colors shrink-0"
                         title={ms.completed ? 'Mark as not achieved' : 'Mark as achieved'}
                       >
                         {ms.completed ? (
@@ -153,40 +219,32 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                           <Circle className="w-4 h-4 text-zinc-500" />
                         )}
                       </button>
-                      <p
-                        className={`text-xs font-medium truncate ${
-                          ms.completed ? 'line-through text-zinc-500' : 'text-zinc-100'
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => toggle(ms.id, isExpanded)}
+                        aria-expanded={isExpanded}
+                        className="flex items-center gap-1.5 min-w-0 flex-1 text-left"
+                        title={isExpanded ? 'Collapse tasks' : 'Expand tasks'}
                       >
-                        {ms.title}
-                      </p>
+                        {isExpanded ? (
+                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        )}
+                        <span
+                          className={`text-xs font-medium truncate ${
+                            ms.completed ? 'line-through text-zinc-500' : 'text-zinc-100'
+                          }`}
+                        >
+                          {ms.title}
+                        </span>
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-2.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setExpandedId(isExpanded ? null : ms.id)}
-                        disabled={linked.length === 0}
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[11px] font-mono tabular-nums ${
-                          linked.length === 0
-                            ? 'border-subtle/60 text-zinc-500 cursor-default'
-                            : 'border-subtle text-zinc-300 hover:border-strong hover:text-zinc-100'
-                        }`}
-                        title={
-                          linked.length === 0
-                            ? 'No tasks linked to this milestone'
-                            : isExpanded
-                              ? 'Hide linked tasks'
-                              : 'Show linked tasks'
-                        }
-                      >
-                        {linked.length > 0 && (
-                          isExpanded
-                            ? <ChevronDown className="w-3 h-3" />
-                            : <ChevronRight className="w-3 h-3" />
-                        )}
-                        <span>{doneCount}/{linked.length} tasks</span>
-                      </button>
+                      <span className="px-1.5 py-0.5 rounded border border-subtle text-[11px] font-mono tabular-nums text-zinc-400">
+                        {doneCount}/{linked.length} tasks
+                      </span>
                       <span className="text-[11px] font-mono text-zinc-400 tabular-nums">
                         {ms.targetDate}
                       </span>
@@ -200,30 +258,44 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     </div>
                   </div>
 
-                  {isExpanded && linked.length > 0 && (
-                    <ul className="border-t border-subtle px-3 py-2 space-y-1.5">
-                      {linked.map((t) => (
-                        <li key={t.id} className="flex items-center gap-2 min-w-0">
-                          <span className="text-[11px] font-mono text-zinc-500 tabular-nums shrink-0">
-                            {t.status}
-                          </span>
-                          <span
-                            className={`text-xs truncate ${
-                              t.status === 'done' ? 'text-zinc-500 line-through' : 'text-zinc-200'
-                            }`}
-                          >
-                            {t.title}
-                          </span>
-                          <span className="text-[11px] font-mono text-zinc-600 tabular-nums shrink-0 ml-auto">
-                            {t.id}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  {isExpanded && (
+                    <TaskSectionList
+                      tasks={linked}
+                      onOpenTask={onOpenTask}
+                      emptyText="No tasks linked to this milestone."
+                    />
                   )}
                 </div>
               );
             })}
+
+            {unlinkedTasks.length > 0 && (() => {
+              const isExpanded = isOpen(UNLINKED_KEY, false);
+              return (
+                <div className="rounded-md border border-dashed border-subtle">
+                  <button
+                    type="button"
+                    onClick={() => toggle(UNLINKED_KEY, isExpanded)}
+                    aria-expanded={isExpanded}
+                    className="w-full flex items-center justify-between gap-2 p-3 text-left"
+                    title={isExpanded ? 'Collapse tasks' : 'Expand tasks'}
+                  >
+                    <span className="flex items-center gap-1.5 min-w-0 pl-6">
+                      {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                      )}
+                      <span className="text-xs font-medium text-zinc-400">No milestone</span>
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded border border-subtle text-[11px] font-mono tabular-nums text-zinc-400">
+                      {unlinkedTasks.filter((t) => t.status === 'done').length}/{unlinkedTasks.length} tasks
+                    </span>
+                  </button>
+                  {isExpanded && <TaskSectionList tasks={unlinkedTasks} onOpenTask={onOpenTask} />}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
