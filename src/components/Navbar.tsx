@@ -8,8 +8,6 @@ interface NavbarProps {
   onNewTask: () => void;
   onOpenCLIModal: () => void;
   isLiveSynced: boolean;
-  showCompleted: boolean;
-  onShowCompletedChange: (show: boolean) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,9 +15,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNewProject,
   onNewTask,
   onOpenCLIModal,
-  isLiveSynced,
-  showCompleted,
-  onShowCompletedChange
+  isLiveSynced
 }) => {
   return (
     <header className="border-b border-subtle bg-surface sticky top-0 z-40">
@@ -49,23 +45,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
             <span>{isLiveSynced ? 'Live' : 'Syncing'}</span>
           </div>
-
-          <div className="h-4 w-[1px] bg-subtle hidden md:block mx-0.5" />
-
-          {/* Applies to every task list: Tasks tab, Board, Milestones */}
-          <label
-            className="flex items-center gap-1.5 px-2 py-1 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer select-none"
-            title="Show completed tasks in every task list"
-          >
-            <input
-              type="checkbox"
-              checked={showCompleted}
-              onChange={(e) => onShowCompletedChange(e.target.checked)}
-              className="accent-zinc-300"
-            />
-            <span className="hidden sm:inline">Show completed tasks</span>
-            <span className="sm:hidden">Done</span>
-          </label>
 
           <div className="h-4 w-[1px] bg-subtle hidden md:block mx-0.5" />
 

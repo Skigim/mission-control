@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Milestone, Task, TaskStatus } from '../../types';
+import { ShowCompletedToggle } from '../ShowCompletedToggle';
 import {
   CheckCircle2,
   Circle,
@@ -20,6 +21,7 @@ interface TimelineViewProps {
   onOpenTask?: (task: Task) => void;
   /** Global: done tasks are left out of the sections unless true; counts still include them. */
   showCompleted: boolean;
+  onShowCompletedChange: (show: boolean) => void;
 }
 
 const UNLINKED_KEY = '__unlinked__';
@@ -87,7 +89,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onToggleMilestone,
   onDeleteMilestone,
   onOpenTask,
-  showCompleted
+  showCompleted,
+  onShowCompletedChange
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -139,13 +142,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           </h2>
           <p className="text-xs text-zinc-400">Release checkpoints and delivery dates</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(!showAddModal)}
-          className="btn-primary"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Milestone</span>
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <ShowCompletedToggle checked={showCompleted} onChange={onShowCompletedChange} />
+          <button
+            onClick={() => setShowAddModal(!showAddModal)}
+            className="btn-primary"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Milestone</span>
+          </button>
+        </div>
       </div>
 
       {/* Add Milestone Inline Form */}

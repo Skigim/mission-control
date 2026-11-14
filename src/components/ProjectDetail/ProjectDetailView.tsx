@@ -14,6 +14,7 @@ import { TaskCard } from '../Kanban/TaskCard';
 import { KanbanBoard } from '../Kanban/KanbanBoard';
 import { TimelineView } from '../Timeline/TimelineView';
 import { HiddenCompletedNote } from '../HiddenCompletedNote';
+import { ShowCompletedToggle } from '../ShowCompletedToggle';
 import {
   ArrowLeft,
   FolderOpen,
@@ -643,7 +644,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           onUpdateTask={onUpdateTask}
           onReorderTasks={onReorderTasks}
           showCompleted={showCompleted}
-          onShowCompleted={() => onShowCompletedChange(true)}
+          onShowCompletedChange={onShowCompletedChange}
         />
       )}
 
@@ -657,6 +658,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           onDeleteMilestone={onDeleteMilestone}
           onOpenTask={onEditTask}
           showCompleted={showCompleted}
+          onShowCompletedChange={onShowCompletedChange}
         />
       )}
 
@@ -698,15 +700,18 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() =>
-              onNewTask(taskStageFilter === 'all' ? 'todo' : taskStageFilter, project.id)
-            }
-            className="btn-secondary self-start sm:self-auto"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Task</span>
-          </button>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <ShowCompletedToggle checked={showCompleted} onChange={onShowCompletedChange} />
+            <button
+              onClick={() =>
+                onNewTask(taskStageFilter === 'all' ? 'todo' : taskStageFilter, project.id)
+              }
+              className="btn-secondary"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Task</span>
+            </button>
+          </div>
         </div>
 
         {filteredProjectTasks.length === 0 && hiddenCompletedCount > 0 ? (

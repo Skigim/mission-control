@@ -234,8 +234,6 @@ export const App: React.FC = () => {
         onNewTask={() => handleNewTask('todo', selectedProjectId || undefined)}
         onOpenCLIModal={() => setIsCLIModalOpen(true)}
         isLiveSynced={isLiveSynced}
-        showCompleted={showCompleted}
-        onShowCompletedChange={setShowCompleted}
       />
 
       {/* Main Content Area */}

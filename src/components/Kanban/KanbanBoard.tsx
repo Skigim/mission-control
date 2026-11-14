@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Task, Project, Milestone, TaskStatus, AIDelegationStatus } from '../../types';
 import { TaskCard } from './TaskCard';
 import { HiddenCompletedNote } from '../HiddenCompletedNote';
+import { ShowCompletedToggle } from '../ShowCompletedToggle';
 import { Plus, Search, Layers } from 'lucide-react';
 
 interface KanbanBoardProps {
@@ -23,7 +24,7 @@ interface KanbanBoardProps {
   installDir?: string;
   /** Global: done tasks are hidden from the board unless true. Stage counts still include them. */
   showCompleted: boolean;
-  onShowCompleted: () => void;
+  onShowCompletedChange: (show: boolean) => void;
 }
 
 const COLUMNS: { id: TaskStatus; label: string; dotColor: string; description: string }[] = [
@@ -46,7 +47,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onReorderTasks,
   projectId,
   showCompleted,
-  onShowCompleted
+  onShowCompletedChange
 }) => {
   const selectedProjectId = projectId;
   const [selectedAIStatus, setSelectedAIStatus] = useState<string>('all');
@@ -208,6 +209,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               <option value="ai-completed">ai-completed</option>
             </select>
           </div>
+
+          <ShowCompletedToggle checked={showCompleted} onChange={onShowCompletedChange} />
         </div>
 
         {/* Quick Add */}
@@ -284,7 +287,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         {activeStageTab === 'all' ? (
           visibleCount === 0 && hiddenDoneCount > 0 ? (
             <div className="surface-panel border-dashed py-16 px-4 flex justify-center">
-              <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} />
+              <HiddenCompletedNote count={hiddenDoneCount} onShow={() => onShowCompletedChange(true)} />
             </div>
           ) : visibleCount === 0 ? (
             <div className="surface-panel border-dashed py-16 px-4 text-center space-y-3">
@@ -397,7 +400,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   </Droppable>
                 );
               })}
-              <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} className="px-1" />
+              <HiddenCompletedNote count={hiddenDoneCount} onShow={() => onShowCompletedChange(true)} className="px-1" />
             </div>
           )
         ) : (
@@ -442,7 +445,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 >
                   {visibleByStage[activeStageTab].length === 0 && activeStageTab === 'done' && hiddenDoneCount > 0 ? (
                     <div className="surface-panel border-dashed py-16 px-4 flex justify-center">
-                      <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} />
+                      <HiddenCompletedNote count={hiddenDoneCount} onShow={() => onShowCompletedChange(true)} />
                     </div>
                   ) : visibleByStage[activeStageTab].length === 0 ? (
                     <div className="surface-panel border-dashed py-16 px-4 text-center space-y-3">
