@@ -12,19 +12,20 @@ const defaultRootDir = path.resolve(__dirname, '..');
 
 export const CANONICAL_GLOBAL_DIR = path.join(os.homedir(), '.mission-control');
 
+// There is ONE database, in the global install, shared by the desktop app, the
+// CLI, every agent's MCP server and any dev checkout of this repo. A checkout
+// never keeps a store of its own, even when a stale data/dashboard.json sits in
+// it: preferring that file is how a dev checkout drifted into a second,
+// diverging database. Only an explicit MISSION_CONTROL_DIR /
+// MISSION_CONTROL_DATA_DIR (the tests' sandbox, a deliberate scratch store)
+// points anywhere else. A checkout falls back to its own directory only when
+// there is no global install at all, in which case there is still one store.
 function resolveRootDir() {
   if (process.env.MISSION_CONTROL_DIR) {
     return path.resolve(process.env.MISSION_CONTROL_DIR);
   }
   const isInsideAsar = __dirname.includes('app.asar') || __dirname.includes('app.asar.unpacked');
-  if (isInsideAsar) {
-    return CANONICAL_GLOBAL_DIR;
-  }
-  const localDataPath = path.join(defaultRootDir, 'data', 'dashboard.json');
-  if (fs.existsSync(localDataPath)) {
-    return defaultRootDir;
-  }
-  if (fs.existsSync(CANONICAL_GLOBAL_DIR)) {
+  if (isInsideAsar || fs.existsSync(CANONICAL_GLOBAL_DIR)) {
     return CANONICAL_GLOBAL_DIR;
   }
   return defaultRootDir;

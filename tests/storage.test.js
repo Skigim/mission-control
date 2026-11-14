@@ -1,13 +1,7 @@
+import { statusMdPath } from './sandbox.js';
 import assert from 'assert';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { storage } from '../server/storage.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, '..');
-const statusMdPath = path.join(rootDir, 'STATUS.md');
 
 console.log('Starting Storage Engine Tests...');
 
@@ -37,7 +31,7 @@ try {
   console.log('PASS: Project creation & retrieval verified.');
 
   // Test 3: STATUS.md exists and is synchronized
-  assert(fs.existsSync(statusMdPath), 'STATUS.md must exist in root');
+  assert(fs.existsSync(statusMdPath), 'STATUS.md must be generated');
   const statusContent = fs.readFileSync(statusMdPath, 'utf-8');
   assert(statusContent.includes('Mission Control'), 'STATUS.md should have Mission Control header');
   assert(statusContent.includes('AI Agent Quick Reference'), 'STATUS.md should have AI reference section');

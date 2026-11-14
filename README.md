@@ -41,6 +41,8 @@ cd ~/.mission-control
 npm install
 ```
 
+There is one database, `~/.mission-control/data/dashboard.json`. A development checkout cloned anywhere else reads and writes that same file, never one of its own, so running `npm run dev` there works on your real data. `npm test` runs against a throwaway store in the system temp directory. To point any surface at a scratch store, set `MISSION_CONTROL_DATA_DIR`.
+
 ---
 
 ## Key Features

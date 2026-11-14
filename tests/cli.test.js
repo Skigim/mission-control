@@ -1,3 +1,4 @@
+import './sandbox.js';
 import assert from 'assert';
 import { execSync } from 'child_process';
 import { storage } from '../server/storage.js';
