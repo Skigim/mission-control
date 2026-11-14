@@ -33,18 +33,22 @@ const STATUS_DOT: Record<TaskStatus, string> = {
 const TaskSectionList: React.FC<{
   tasks: Task[];
   onOpenTask?: (task: Task) => void;
+  showCompleted: boolean;
   emptyText?: string;
-}> = ({ tasks, onOpenTask, emptyText }) => {
-  if (tasks.length === 0) {
+}> = ({ tasks, onOpenTask, showCompleted, emptyText }) => {
+  const visible = showCompleted ? tasks : tasks.filter((t) => t.status !== 'done');
+  if (visible.length === 0) {
     return (
       <p className="border-t border-subtle px-3 py-2.5 pl-9 text-[11px] font-mono text-zinc-500">
-        {emptyText}
+        {tasks.length === 0
+          ? emptyText
+          : `All ${tasks.length} task${tasks.length === 1 ? '' : 's'} completed (hidden).`}
       </p>
     );
   }
   return (
     <ul className="border-t border-subtle py-1">
-      {tasks.map((t) => (
+      {visible.map((t) => (
         <li key={t.id}>
           <button
             type="button"
@@ -85,7 +89,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTargetDate, setNewTargetDate] = useState('');
-  // A section is open by default while its milestone is pending and has tasks;
+  // Done tasks are hidden from the sections unless asked for; counts still include them.
+  const [showCompleted, setShowCompleted] = useState(false);
+  // A section is open by default while its milestone is pending and has open tasks;
   // a click records an explicit open/closed choice that overrides the default.
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   const isOpen = (key: string, byDefault: boolean) => openOverrides[key] ?? byDefault;
@@ -132,13 +138,24 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           </h2>
           <p className="text-xs text-zinc-400">Release checkpoints and delivery dates</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(!showAddModal)}
-          className="btn-primary"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Add Milestone</span>
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <label className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showCompleted}
+              onChange={(e) => setShowCompleted(e.target.checked)}
+              className="accent-zinc-300"
+            />
+            <span>Show completed tasks</span>
+          </label>
+          <button
+            onClick={() => setShowAddModal(!showAddModal)}
+            className="btn-primary"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Milestone</span>
+          </button>
+        </div>
       </div>
 
       {/* Add Milestone Inline Form */}
@@ -195,7 +212,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             {sortedMilestones.map((ms) => {
               const linked = tasksByMilestone[ms.id] || [];
               const doneCount = linked.filter((t) => t.status === 'done').length;
-              const isExpanded = isOpen(ms.id, !ms.completed && linked.length > 0);
+              const isExpanded = isOpen(ms.id, !ms.completed && doneCount < linked.length);
 
               return (
                 <div
@@ -262,6 +279,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                     <TaskSectionList
                       tasks={linked}
                       onOpenTask={onOpenTask}
+                      showCompleted={showCompleted}
                       emptyText="No tasks linked to this milestone."
                     />
                   )}
@@ -292,7 +310,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       {unlinkedTasks.filter((t) => t.status === 'done').length}/{unlinkedTasks.length} tasks
                     </span>
                   </button>
-                  {isExpanded && <TaskSectionList tasks={unlinkedTasks} onOpenTask={onOpenTask} />}
+                  {isExpanded && <TaskSectionList tasks={unlinkedTasks} onOpenTask={onOpenTask} showCompleted={showCompleted} />}
                 </div>
               );
             })()}
