@@ -16,6 +16,8 @@ import { AIContextModal } from './components/Modals/AIContextModal';
 import { CLIHelpModal } from './components/Modals/CLIHelpModal';
 import { LocalInspectorModal } from './components/Modals/LocalInspectorModal';
 
+const SHOW_COMPLETED_KEY = 'mission-control.showCompletedTasks';
+
 export const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -44,6 +46,24 @@ export const App: React.FC = () => {
 
   // Dedicated project page state
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+
+  // Completed tasks are hidden from every task list unless asked for. A view
+  // preference, so it lives in this browser profile rather than the database.
+  const [showCompleted, setShowCompleted] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SHOW_COMPLETED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SHOW_COMPLETED_KEY, showCompleted ? '1' : '0');
+    } catch {
+      // Storage unavailable: the choice just lasts for this session.
+    }
+  }, [showCompleted]);
 
   const loadData = useCallback(async () => {
     try {
@@ -214,6 +234,8 @@ export const App: React.FC = () => {
         onNewTask={() => handleNewTask('todo', selectedProjectId || undefined)}
         onOpenCLIModal={() => setIsCLIModalOpen(true)}
         isLiveSynced={isLiveSynced}
+        showCompleted={showCompleted}
+        onShowCompletedChange={setShowCompleted}
       />
 
       {/* Main Content Area */}
@@ -254,6 +276,8 @@ export const App: React.FC = () => {
                     onCreateMilestone={handleCreateMilestone}
                     onToggleMilestone={handleToggleMilestone}
                     onDeleteMilestone={handleDeleteMilestone}
+                    showCompleted={showCompleted}
+                    onShowCompletedChange={setShowCompleted}
                   />
                 );
               }

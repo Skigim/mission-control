@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Task, Project, Milestone, TaskStatus, AIDelegationStatus } from '../../types';
 import { TaskCard } from './TaskCard';
+import { HiddenCompletedNote } from '../HiddenCompletedNote';
 import { Plus, Search, Layers } from 'lucide-react';
 
 interface KanbanBoardProps {
@@ -20,6 +21,9 @@ interface KanbanBoardProps {
   }) => void;
   projectId: string;
   installDir?: string;
+  /** Global: done tasks are hidden from the board unless true. Stage counts still include them. */
+  showCompleted: boolean;
+  onShowCompleted: () => void;
 }
 
 const COLUMNS: { id: TaskStatus; label: string; dotColor: string; description: string }[] = [
@@ -40,7 +44,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeleteTask,
   onUpdateTask,
   onReorderTasks,
-  projectId
+  projectId,
+  showCompleted,
+  onShowCompleted
 }) => {
   const selectedProjectId = projectId;
   const [selectedAIStatus, setSelectedAIStatus] = useState<string>('all');
@@ -89,6 +95,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return grouped;
   }, [baseFilteredTasks]);
 
+  // What is actually rendered (and what drag indices refer to). Hidden done tasks
+  // leave the Done lane empty but it stays a drop target while dragging.
+  const visibleByStage = useMemo(
+    () => (showCompleted ? tasksByStage : { ...tasksByStage, done: [] }),
+    [tasksByStage, showCompleted]
+  );
+  const hiddenDoneCount = showCompleted ? 0 : tasksByStage.done.length;
+  const visibleCount = baseFilteredTasks.length - hiddenDoneCount;
+
   const handleDragEnd = (result: DropResult) => {
     setIsDragging(false);
     const { source, destination, draggableId } = result;
@@ -118,7 +133,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
 
     if (sourceStage === destStage) {
-      const stageList = [...(tasksByStage[sourceStage] || [])];
+      const stageList = [...(visibleByStage[sourceStage] || [])];
       const [removed] = stageList.splice(source.index, 1);
       if (removed) {
         stageList.splice(destination.index, 0, removed);
@@ -135,7 +150,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onUpdateTask(draggableId, { order: destination.index + 1 });
       }
     } else {
-      const destList = [...(tasksByStage[destStage] || [])];
+      const destList = [...(visibleByStage[destStage] || [])];
       destList.splice(destination.index, 0, movedTask);
       const orderedIds = destList.map((t) => t.id);
 
@@ -267,7 +282,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragEnd={handleDragEnd}
       >
         {activeStageTab === 'all' ? (
-          baseFilteredTasks.length === 0 ? (
+          visibleCount === 0 && hiddenDoneCount > 0 ? (
+            <div className="surface-panel border-dashed py-16 px-4 flex justify-center">
+              <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} />
+            </div>
+          ) : visibleCount === 0 ? (
             <div className="surface-panel border-dashed py-16 px-4 text-center space-y-3">
               <p className="text-xs font-mono text-zinc-400">
                 No tasks match your current filters.
@@ -285,7 +304,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ) : (
             <div className="space-y-5">
               {COLUMNS.map((col) => {
-                const stageTasks = tasksByStage[col.id];
+                const stageTasks = visibleByStage[col.id];
                 const isEmpty = stageTasks.length === 0;
 
                 return (
@@ -378,6 +397,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   </Droppable>
                 );
               })}
+              <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} className="px-1" />
             </div>
           )
         ) : (
@@ -389,7 +409,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                   <span className={`w-2 h-2 rounded-full ${activeStageMeta.dotColor}`} />
                   <h3 className="label-caps text-zinc-200">{activeStageMeta.label}</h3>
                   <span className="text-[11px] font-mono text-zinc-500 tabular-nums">
-                    ({tasksByStage[activeStageMeta.id].length})
+                    ({visibleByStage[activeStageMeta.id].length})
                   </span>
                   <span className="hidden sm:inline text-xs text-zinc-500">
                     — {activeStageMeta.description}
@@ -420,7 +440,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     snapshot.isDraggingOver ? 'p-2 bg-elevated/30 border border-dashed border-strong' : ''
                   }`}
                 >
-                  {tasksByStage[activeStageTab].length === 0 ? (
+                  {visibleByStage[activeStageTab].length === 0 && activeStageTab === 'done' && hiddenDoneCount > 0 ? (
+                    <div className="surface-panel border-dashed py-16 px-4 flex justify-center">
+                      <HiddenCompletedNote count={hiddenDoneCount} onShow={onShowCompleted} />
+                    </div>
+                  ) : visibleByStage[activeStageTab].length === 0 ? (
                     <div className="surface-panel border-dashed py-16 px-4 text-center space-y-3">
                       <p className="text-xs font-mono text-zinc-500">
                         No tasks in <span className="text-zinc-300">{activeStageMeta?.label}</span>.
@@ -439,7 +463,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       </button>
                     </div>
                   ) : (
-                    tasksByStage[activeStageTab].map((task, index) => (
+                    visibleByStage[activeStageTab].map((task, index) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
                         {(dragProvided, dragSnapshot) => (
                           <div

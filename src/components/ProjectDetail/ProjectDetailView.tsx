@@ -13,6 +13,7 @@ import { api } from '../../api/client';
 import { TaskCard } from '../Kanban/TaskCard';
 import { KanbanBoard } from '../Kanban/KanbanBoard';
 import { TimelineView } from '../Timeline/TimelineView';
+import { HiddenCompletedNote } from '../HiddenCompletedNote';
 import {
   ArrowLeft,
   FolderOpen,
@@ -65,6 +66,9 @@ interface ProjectDetailViewProps {
   onCreateMilestone: (ms: Partial<Milestone>) => void;
   onToggleMilestone: (id: string, completed: boolean) => void;
   onDeleteMilestone: (id: string) => void;
+  /** Global: completed tasks are hidden from every task list unless true. */
+  showCompleted: boolean;
+  onShowCompletedChange: (show: boolean) => void;
 }
 
 type ProjectSection = 'tasks' | 'board' | 'milestones' | 'activity';
@@ -120,7 +124,9 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
   installDir,
   onCreateMilestone,
   onToggleMilestone,
-  onDeleteMilestone
+  onDeleteMilestone,
+  showCompleted,
+  onShowCompletedChange
 }) => {
   const [section, setSection] = useState<ProjectSection>('tasks');
   const [localInfo, setLocalInfo] = useState<LocalFolderInspection | null>(null);
@@ -181,10 +187,17 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     [projectTasks]
   );
 
-  const filteredProjectTasks = useMemo(() => {
+  const stageFilteredTasks = useMemo(() => {
     if (taskStageFilter === 'all') return projectTasks;
     return projectTasks.filter((t) => t.status === taskStageFilter);
   }, [projectTasks, taskStageFilter]);
+
+  const filteredProjectTasks = useMemo(
+    () => (showCompleted ? stageFilteredTasks : stageFilteredTasks.filter((t) => t.status !== 'done')),
+    [stageFilteredTasks, showCompleted]
+  );
+
+  const hiddenCompletedCount = stageFilteredTasks.length - filteredProjectTasks.length;
 
   // Match Mission Control activity log items to this project (by projectId or by matching name/task titles)
   const projectDashboardLogs = useMemo(() => {
@@ -629,6 +642,8 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           onDeleteTask={onDeleteTask}
           onUpdateTask={onUpdateTask}
           onReorderTasks={onReorderTasks}
+          showCompleted={showCompleted}
+          onShowCompleted={() => onShowCompletedChange(true)}
         />
       )}
 
@@ -641,6 +656,7 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           onToggleMilestone={onToggleMilestone}
           onDeleteMilestone={onDeleteMilestone}
           onOpenTask={onEditTask}
+          showCompleted={showCompleted}
         />
       )}
 
@@ -693,7 +709,14 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
           </button>
         </div>
 
-        {filteredProjectTasks.length === 0 ? (
+        {filteredProjectTasks.length === 0 && hiddenCompletedCount > 0 ? (
+          <div className="surface-panel border-dashed py-10 px-4 flex justify-center">
+            <HiddenCompletedNote
+              count={hiddenCompletedCount}
+              onShow={() => onShowCompletedChange(true)}
+            />
+          </div>
+        ) : filteredProjectTasks.length === 0 ? (
           <div className="surface-panel border-dashed py-10 px-4 text-center space-y-2">
             <p className="text-xs font-mono text-zinc-500">
               No tasks in this view for {project.name}.
@@ -761,6 +784,13 @@ export const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
               )}
             </Droppable>
           </DragDropContext>
+        )}
+        {filteredProjectTasks.length > 0 && (
+          <HiddenCompletedNote
+            count={hiddenCompletedCount}
+            onShow={() => onShowCompletedChange(true)}
+            className="px-1"
+          />
         )}
       </section>
       )}

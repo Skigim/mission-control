@@ -18,6 +18,8 @@ interface TimelineViewProps {
   onDeleteMilestone: (id: string) => void;
   /** Opens the full task (the task modal). */
   onOpenTask?: (task: Task) => void;
+  /** Global: done tasks are left out of the sections unless true; counts still include them. */
+  showCompleted: boolean;
 }
 
 const UNLINKED_KEY = '__unlinked__';
@@ -84,13 +86,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onCreateMilestone,
   onToggleMilestone,
   onDeleteMilestone,
-  onOpenTask
+  onOpenTask,
+  showCompleted
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newTargetDate, setNewTargetDate] = useState('');
-  // Done tasks are hidden from the sections unless asked for; counts still include them.
-  const [showCompleted, setShowCompleted] = useState(false);
   // A section is open by default while its milestone is pending and has open tasks;
   // a click records an explicit open/closed choice that overrides the default.
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
@@ -138,24 +139,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           </h2>
           <p className="text-xs text-zinc-400">Release checkpoints and delivery dates</p>
         </div>
-        <div className="flex items-center gap-3 self-start sm:self-auto">
-          <label className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showCompleted}
-              onChange={(e) => setShowCompleted(e.target.checked)}
-              className="accent-zinc-300"
-            />
-            <span>Show completed tasks</span>
-          </label>
-          <button
-            onClick={() => setShowAddModal(!showAddModal)}
-            className="btn-primary"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Milestone</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(!showAddModal)}
+          className="btn-primary"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add Milestone</span>
+        </button>
       </div>
 
       {/* Add Milestone Inline Form */}
